@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForosRaiz - imageboard minimalista</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <header id="topbar">
+    <div class="inner">
+      <div id="top-actions">
+        <button id="my-profile-btn" type="button" class="my-profile-chip" title="Mi perfil">
+          <span id="mp-avatar"></span>
+          <span id="mp-label">Mi perfil</span>
+        </button>
+        <button id="notif-btn" type="button" class="top-chip" title="Notificaciones">
+          <span class="top-chip-label">Notificaciones</span>
+          <span id="notif-badge" class="notif-badge" hidden></span>
+        </button>
+        <button id="inicio-seguidos-btn" type="button" class="top-chip" title="Inicio: publicaciones de tus seguidos">
+          <span class="top-chip-label">Inicio</span>
+        </button>
+        <button id="saved-btn" type="button" class="top-chip" title="Foros guardados">
+          <span class="top-chip-label">Guardados</span>
+        </button>
+      </div>
+      <h1 class="logo"><a href="#" data-board="home">ForosRaiz</a></h1>
+      <nav id="board-nav"></nav>
+    </div>
+  </header>
+
+  <!-- Contenido dinámico -->
+  <main id="content"></main>
+
+  <footer id="footer">
+    <p>ForosRaiz &mdash; imageboard minimalista &middot; los &uacute;nicos que pueden publicar son los usuarios registrados</p>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

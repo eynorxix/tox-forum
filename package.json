@@ -1,0 +1,6 @@
+{
+  "name": "forchan",
+  "private": true,
+  "type": "module",
+  "description": "Imageboard minimalista estatico (modulos ES). Se sirve con: python3 -m http.server y abriendo http://localhost:8000"
+}
