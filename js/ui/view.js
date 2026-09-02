@@ -10,7 +10,13 @@ import { renderProfile, renderMyProfile } from "./profile.js";
 import { renderRightPanel } from "./rightpanel.js";
 import { openAuth } from "./auth.js";
 import { cancelAnims, getChartType, animateBars, setChart } from "../domain/universe.js";
-import { syncBoard, watchBoard, unwatchBoard } from "../utils/relay-sync.js";
+import { syncBoard, watchBoard, unwatchBoard, setNamesRefresh } from "../utils/relay-sync.js";
+
+setNamesRefresh(function () {
+  if (session.currentView && session.currentView !== "home" &&
+      session.currentView !== "seguidos" &&
+      !session.profileView && !session.myProfileView) render();
+});
 
 export function go(view) {
   session.myProfileView = false;

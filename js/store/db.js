@@ -1,6 +1,7 @@
 /* ===== capa de datos: estado persistente, identidad y acceso al almacen ===== */
 import { STORAGE_KEY, BOARDS } from "../config.js";
 import { importNsec, activateFromB64 } from "../utils/nostr.js";
+import { fetchNames, publishProfile } from "../utils/relays.js";
 
 export var state = load();
 if (!state || !state.counter) state = { counter: 1, boards: {} };
@@ -12,8 +13,35 @@ if (!state.me || !state.me.npub) {
   /* por defecto el visitante es anonimo */
   state.me = null;
 }
+/* limpia los datos de demostracion que ya no se generan: hilos demo, votos y
+   colaboradores ficticios. Solo se ejecuta si existian. */
+if (state.demoSeeded || state.collabSeeded) {
+  BOARDS.forEach(function (b) {
+    var coll = state.boards[b.id];
+    if (coll) state.boards[b.id] = coll.filter(function (th) { return !th.demo; });
+  });
+  delete state.demoSeeded;
+  delete state.collabSeeded;
+  delete state.collabs;
+  delete state.votes;
+  state.votes = {};
+  save();
+}
 if (state.me && state.me.sec) {
   activateFromB64(state.me.sec, state.me.pubHex);
+}
+/* sesiones ya iniciadas con el nombre por defecto "Usuario xxxx": se corrige
+   al momento con el nombre publicado en relays (kind 0) para esa npub */
+if (state.me && state.me.pubHex && /^Usuario /.test(state.me.name || "")) {
+  (function () {
+    var pub = state.me.pubHex;
+    fetchNames([pub]).then(function (map) {
+      if (map[pub] && state.me && state.me.pubHex === pub) {
+        state.me.name = map[pub];
+        save();
+      }
+    }).catch(function () {});
+  })();
 }
 if (!state.anonName) state.anonName = "";    /* ultimo nombre anonimo usado */
 if (!state.following) state.following = [];  /* pubHex que el usuario actual sigue */
@@ -102,8 +130,24 @@ export function login(nsec) {
     }
     state.me = state.users[pub];
     save();
-    if (_onLogin) _onLogin();
-    return true;
+    /* identidad POR NPUB: adoptamos el nombre que este usuario tiene publicado
+       en los relays (kind 0) si el local es el tiron por defecto, y publicamos
+       el perfil por si esta cuenta nunca lo habia hecho (asi todos ven el
+       mismo nombre). El nsec solo firma, nunca se comparte. */
+    return fetchNames([pub]).then(function (map) {
+      var real = map[pub];
+      if (real && /^Usuario /.test(state.me.name || "")) {
+        state.me.name = real;
+        save();
+      }
+      publishProfile({ name: state.me.name, picture: state.me.icon || null });
+      if (_onLogin) _onLogin();
+      return true;
+    }).catch(function () {
+      publishProfile({ name: state.me.name, picture: state.me.icon || null });
+      if (_onLogin) _onLogin();
+      return true;
+    });
   }).catch(function () {
     return false;
   });

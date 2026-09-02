@@ -7,7 +7,8 @@ import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
-import { publishPost } from "../utils/relays.js";
+import { publishPost, RELAYS } from "../utils/relays.js";
+import { toast } from "../utils/dom.js";
 import { openImage } from "./lightbox.js";
 import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
@@ -212,7 +213,10 @@ export function renderMyProfile() {
       };
       getBoard(dest).push(thr);
       save();
-      publishPost({ board: dest, no: thr.no, content: qtext, image: image || null });
+      publishPost({ board: dest, no: thr.no, content: qtext, image: image || null }).then(function (ok) {
+        if (ok >= RELAYS.length / 2) toast("Publicado en /" + dest + "/ (" + ok + "/" + RELAYS.length + " relays)");
+        else toast("Sin conexion a relays: el post quedo solo local", "err");
+      });
       refresh();
     };
     if (qfile) {

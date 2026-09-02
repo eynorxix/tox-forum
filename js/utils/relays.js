@@ -36,7 +36,7 @@ function getPool() {
 
 /* firma (si hay clave activa) y publica un evento a los relays.
    Devuelve Promise<number> = cuantos relays confirmaron. */
-function signAndPublish(draft) {
+function doPublish(draft) {
   var sec = getActiveSec();
   if (!sec) return Promise.resolve(0);
   return getPool().then(function (p) {
@@ -60,12 +60,50 @@ function signAndPublish(draft) {
   }).catch(function () { return 0; });
 }
 
+/* publica con un reintento: si ningun relay confirmo, espera 4s y lo intenta
+   una vez mas. Asi un relay caido en ese momento no pierde el post. */
+function pubWithRetry(draft) {
+  var attempt = 0;
+  var tx = function () {
+    return doPublish(draft).then(function (ok) {
+      if (ok === 0 && attempt < 1) {
+        attempt++;
+        return new Promise(function (res) {
+          setTimeout(function () { res(tx()); }, 4000);
+        });
+      }
+      return ok;
+    });
+  };
+  return tx();
+}
+
+/* sal por instalacion: hace el d-tag unico por navegador aunque el contador
+   de 'no' coincida en dos dispositivos de la misma cuenta. Sin esto, los
+   relays (kind 33033 = addressable) REMPLAZAN el post publicado desde el
+   otro navegador y los posts se "eliminan" solos. */
+var PUB_SALT = null;
+function pubSalt() {
+  if (PUB_SALT) return PUB_SALT;
+  try {
+    PUB_SALT = localStorage.getItem("forosraiz_pub_salt");
+    if (!PUB_SALT) {
+      PUB_SALT = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("forosraiz_pub_salt", PUB_SALT);
+    }
+  } catch (e) {
+    PUB_SALT = Math.random().toString(36).slice(2);
+  }
+  return PUB_SALT;
+}
+
 /* publica un post de ForosRaiz a los relays.
-   input: { board, no, content, image, replyTo } (replyTo opcional: no del hilo) */
+   input: { board, no, content, image, replyTo } (replyTo opcional: no del hilo)
+   Devuelve Promise<number> = relays que confirmaron (0 = ninguno). */
 export function publishPost(input) {
   var now = Math.floor(Date.now() / 1000);
   var tags = [
-    ["d", POST_DTAG + ":" + input.board + ":" + input.no],
+    ["d", POST_DTAG + ":" + input.board + ":" + input.no + ":" + pubSalt()],
     ["t", "forosraiz"],
     ["t", input.board],
     ["board", input.board]
@@ -76,7 +114,7 @@ export function publishPost(input) {
   if (input.image && content.indexOf(input.image) < 0) {
     content = content + "\n" + input.image;
   }
-  return signAndPublish({ kind: POST_KIND, created_at: now, tags: tags, content: content });
+  return pubWithRetry({ kind: POST_KIND, created_at: now, tags: tags, content: content });
 }
 
 /* publica el perfil (kind 0, NIP-01) del usuario a los relays.
@@ -89,7 +127,7 @@ export function publishProfile(input) {
     picture: input.picture || "",
     about: "Perfil de ForosRaiz"
   });
-  return signAndPublish({ kind: 0, created_at: now, tags: [], content: content });
+  return pubWithRetry({ kind: 0, created_at: now, tags: [], content: content });
 }
 
 /* ---------- consultas (lectura de vuelta) ---------- */

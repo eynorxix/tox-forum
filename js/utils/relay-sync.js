@@ -12,7 +12,12 @@ import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts } from
 var syncing = {};
 var lastSync = {};
 var namesCache = {};
+var onNamesChange = null;
 var SYNC_INTERVAL = 15000; /* ms minimo entre sincronizaciones de un mismo foro */
+
+/* llamado cuando se resuelven nombres de autores desde los relays (kind 0),
+   para que la UI actualice los nombres al momento */
+export function setNamesRefresh(cb) { onNamesChange = cb; }
 
 function nameFor(pubHex) {
   if (namesCache[pubHex]) return namesCache[pubHex];
@@ -97,7 +102,10 @@ function resolveNames(pubkeys, coll) {
         }
       });
     });
-    if (any) save();
+    if (any) {
+      save();
+      if (onNamesChange) onNamesChange();
+    }
   }).catch(function () { /* sin nombres, se queda el pubkey corto */ });
 }
 
@@ -160,6 +168,15 @@ export function watchBoard(boardId, onIncoming) {
   livePending[boardId] = true;
   subscribeBoardPosts(boardId, function (post) {
     var changed = mergeBoard(boardId, [post]);
+    if (!changed && post.threadNo != null &&
+        !getBoard(boardId).some(function (th) { return th.no === post.threadNo; })) {
+      /* llego una respuesta antes que su hilo: traemos el foro completo,
+         el hilo llegara en la proxima sincronizacion */
+      syncBoard(boardId, function () {
+        if (liveCbs[boardId]) liveCbs[boardId]();
+      });
+      return;
+    }
     if (changed && liveCbs[boardId]) liveCbs[boardId]();
   }).then(function (closer) {
     delete livePending[boardId];

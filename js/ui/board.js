@@ -6,7 +6,8 @@ import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
-import { publishPost } from "../utils/relays.js";
+import { publishPost, RELAYS } from "../utils/relays.js";
+import { toast } from "../utils/dom.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
 import { refresh } from "./appshell.js";
@@ -18,6 +19,17 @@ function handleImageUpload(file, onDone, onErr) {
   uploadImage(file, null).then(onDone).catch(function () {
     try { fileToDataURL(file, onDone); } catch (e) { onErr(); }
   });
+}
+
+/* informa al usuario cuantos relays confirmaron el post (0 = solo local) */
+function reportPublish(ok) {
+  if (ok >= RELAYS.length / 2) {
+    toast("Publicado en " + ok + "/" + RELAYS.length + " relays");
+  } else if (ok > 0) {
+    toast("Solo " + ok + "/" + RELAYS.length + " relays recibieron el post", "warn");
+  } else {
+    toast("Sin conexion a relays: el post quedo solo en este navegador y se reintentara solo", "err");
+  }
 }
 
 export function renderBoard(id) {
@@ -135,7 +147,9 @@ function makePostForm(boardId) {
       };
       getBoard(boardId).push(thread);
       save();
-      if (!anon) publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image });
+      if (!anon) {
+        publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image }).then(reportPublish);
+      }
       refresh();
     };
 
@@ -306,7 +320,9 @@ function makeReplyForm(boardId, thread) {
       };
       thread.replies.push(reply);
       save();
-      if (!anon) publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no });
+      if (!anon) {
+        publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no }).then(reportPublish);
+      }
       refresh();
     };
     if (file) {

@@ -2,8 +2,9 @@
    Agrupa en un solo lugar: editar perfil, claves (nsec/npub) y foros.
    El perfil publico solo muestra avatar, nombre, descripcion, publicar y posts. */
 import { getMe, save, logout, myMainForum, myRegistered } from "../store/db.js";
-import { fileToDataURL } from "../utils/dom.js";
+import { fileToDataURL, toast } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
+import { publishProfile } from "../utils/relays.js";
 import { buildGrid } from "./foros.js";
 import { refreshChip } from "./nav.js";
 import { refresh, navTo } from "./appshell.js";
@@ -97,6 +98,11 @@ export function openSettings() {
       save();
       refreshChip();
       refresh();
+      /* el nombre/perfil se publica a relays (kind 0) para que todos los
+         usuarios vean el mismo nombre al conectarse por npub */
+      publishProfile({ name: me.name, picture: me.icon || null }).then(function (ok) {
+        toast(ok > 0 ? "Perfil actualizado y publicado (" + ok + " relays)" : "Perfil guardado solo en este navegador", ok > 0 ? "" : "warn");
+      });
     };
     if (inAv.files[0]) {
       uploadImage(inAv.files[0], null).then(function (url) {
