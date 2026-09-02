@@ -13,6 +13,7 @@ import { openImage } from "./lightbox.js";
 import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
+import { isBanned } from "../store/moderation.js";
 
 export function renderProfile(boardId, user) {
   var b = BOARDS.find(function (x) { return x.id === boardId; }) || { name: boardId };
@@ -24,6 +25,32 @@ export function renderProfile(boardId, user) {
   back.className = "back-btn";
   back.textContent = "← Volver a /" + boardId + "/";
   back.addEventListener("click", function () { navTo(boardId); });
+  wrap.appendChild(back);
+
+  var banned = isBanned(user.pubHex);
+  if (banned) {
+    var banHead = document.createElement("div");
+    banHead.className = "profile-head";
+    var icon0 = document.createElement("div");
+    icon0.className = "avatar-placeholder";
+    icon0.textContent = "!";
+    var info0 = document.createElement("div");
+    var h0 = document.createElement("h3");
+    h0.textContent = user.name + " (baneado)";
+    var sub0 = document.createElement("p");
+    sub0.className = "collab-count";
+    sub0.textContent = "Este usuario ha sido baneado por el moderador del sitio.";
+    info0.appendChild(h0);
+    info0.appendChild(sub0);
+    banHead.appendChild(icon0);
+    banHead.appendChild(info0);
+    wrap.appendChild(banHead);
+    var notice0 = document.createElement("div");
+    notice0.className = "notice";
+    notice0.textContent = "Sus publicaciones estan ocultas y ya no apareceran en los foros, feeds ni notificaciones.";
+    wrap.appendChild(notice0);
+    return wrap;
+  }
 
   var head = document.createElement("div");
   head.className = "profile-head";
@@ -102,7 +129,6 @@ export function renderProfile(boardId, user) {
     postsSec.appendChild(div);
   });
 
-  wrap.appendChild(back);
   wrap.appendChild(head);
   if (followRow) wrap.appendChild(followRow);
   wrap.appendChild(desc);
@@ -171,6 +197,13 @@ export function renderMyProfile() {
   info.appendChild(h3);
   info.appendChild(sub);
   head.appendChild(info);
+
+  if (isBanned(me.pubHex)) {
+    var banMine = document.createElement("div");
+    banMine.className = "notice";
+    banMine.textContent = "Tu cuenta ha sido baneada por el moderador: tus publicaciones estan ocultas para los demas.";
+    wrap.appendChild(banMine);
+  }
 
   var desc = document.createElement("p");
   desc.className = "profile-desc";

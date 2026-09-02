@@ -11,6 +11,7 @@ import { session } from "../store/session.js";
 import { linksInText, fmtDate } from "../utils/text.js";
 import { openImage } from "./lightbox.js";
 import { openProfile } from "./appshell.js";
+import { isBanned } from "../store/moderation.js";
 
 /* ---------- Inicio (seguidos) ---------- */
 export function renderFollowingFeed() {
@@ -66,11 +67,11 @@ export function renderFollowingFeed() {
   BOARDS.forEach(function (b) {
     var board = getBoard(b.id);
     board.forEach(function (th) {
-      if (th.ownerType === "user" && followers.indexOf(th.ownerPub) >= 0) {
+      if (th.ownerType === "user" && followers.indexOf(th.ownerPub) >= 0 && !isBanned(th.ownerPub)) {
         items.push({ b: b, th: th, post: th, type: "thread" });
       }
       th.replies.forEach(function (r) {
-        if (r.ownerType === "user" && followers.indexOf(r.ownerPub) >= 0) {
+        if (r.ownerType === "user" && followers.indexOf(r.ownerPub) >= 0 && !isBanned(r.ownerPub)) {
           items.push({ b: b, th: th, post: r, type: "reply" });
         }
       });
@@ -144,6 +145,7 @@ function objectUsers() {
   var out = [];
   Object.keys(state.users || {}).forEach(function (pubHex) {
     var u = state.users[pubHex];
+    if (isBanned(pubHex)) return;
     if (u.pubHex && isFollowing(u.pubHex)) return;
     out.push(u);
   });
@@ -262,6 +264,7 @@ export function syncFollowedNotifications() {
   if (!state.followNotifTs) state.followNotifTs = {};
   var changed = false;
   followingList().forEach(function (pubHex) {
+    if (isBanned(pubHex)) return;
     var last = state.followNotifTs[pubHex] || 0;
     var latest = last;
     var b = null;

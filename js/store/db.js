@@ -2,6 +2,7 @@
 import { STORAGE_KEY, BOARDS } from "../config.js";
 import { importNsec, activateFromB64 } from "../utils/nostr.js";
 import { fetchNames, publishProfile } from "../utils/relays.js";
+import { isBanned } from "./moderation.js";
 
 export var state = load();
 if (!state || !state.counter) state = { counter: 1, boards: {} };
@@ -300,6 +301,7 @@ export function isLiked(boardId, threadNo, replyNo) {
 /* todos los posts de un autor (pubHex) en todos los foros */
 export function postsByAuthor(pubHex) {
   var out = [];
+  if (isBanned(pubHex)) return out;
   BOARDS.forEach(function (b) {
     getBoard(b.id).forEach(function (th) {
       if (th.ownerType === "user" && th.ownerPub === pubHex) {

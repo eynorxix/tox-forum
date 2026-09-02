@@ -11,6 +11,7 @@ import { closeForos, isForosOpen } from "./ui/foros.js";
 import { closeAuth, isAuthOpen } from "./ui/auth.js";
 import { closeSettings, isSettingsOpen } from "./ui/settings.js";
 import { acHide, isAcOpen } from "./utils/autocomplete.js";
+import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
 import {
   toggleNotifications, closeNotifications, isNotifOpen, refreshNotifBadge,
   openSaved, closeSaved, isSavedOpen, syncFollowedNotifications
@@ -113,6 +114,11 @@ setInterval(function () {
 /* precarga nostr-tools desde el CDN en segundo plano para que registrar/
    publicar no tarde (la primera vez era donde se veia el "Generando claves...") */
 warmNostr();
+
+/* moderacion: al aplicar una lista de baneos (o baneos nuevos del admin),
+   se purgan los posts guardados y se re-renderiza la vista actual */
+setBansRefresh(render);
+ensureBanInit();
 
 renderNav();
 refreshChip();

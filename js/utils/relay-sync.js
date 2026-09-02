@@ -8,6 +8,7 @@
    - Los anonimos NO publican a relays: su ambito sigue siendo solo local. */
 import { state, save, getBoard, getMe } from "../store/db.js";
 import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts } from "./relays.js";
+import { isBanned } from "../store/moderation.js";
 
 var syncing = {};
 var lastSync = {};
@@ -44,6 +45,8 @@ function buildPost(post, isThread) {
 /* fusiona posts (hilos primero, luego respuestas) dentro de un foro.
    Devuelve true si algo cambio. La fuente local gana en caso de conflicto. */
 function mergeBoard(boardId, posts) {
+  /* los posts de autores baneados no se fusionan (moderacion del admin) */
+  posts = (posts || []).filter(function (p) { return !isBanned(p.pubkey); });
   var coll = getBoard(boardId);
   var existing = {};
   coll.forEach(function (th) { existing[th.no] = th; });

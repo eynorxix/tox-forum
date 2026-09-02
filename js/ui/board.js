@@ -12,6 +12,7 @@ import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
 import { refresh } from "./appshell.js";
 import { likeButton } from "./activity.js";
+import { isBanned } from "../store/moderation.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -53,15 +54,20 @@ export function renderBoard(id) {
 
   wrap.appendChild(makePostForm(id));
 
-  threads.slice().reverse().forEach(function (thread) {
+  /* autores baneados: no se muestran (moderacion del admin) */
+  var visible = threads.filter(function (th) {
+    return !(th.ownerType === "user" && isBanned(th.ownerPub));
+  });
+
+  visible.slice().reverse().forEach(function (thread) {
     wrap.appendChild(renderThread(id, thread));
   });
 
   var foot = document.createElement("div");
   foot.className = "board-foot";
-  foot.textContent = threads.length === 0
+  foot.textContent = visible.length === 0
     ? "Este tablero esta vacio — se el primero en publicar."
-    : threads.length + " hilo(s) en /" + id + "/.";
+    : visible.length + " hilo(s) en /" + id + "/.";
   wrap.appendChild(foot);
 
   return wrap;
@@ -198,6 +204,7 @@ function renderThread(boardId, thread) {
   var replies = document.createElement("div");
   replies.className = "replies";
   thread.replies.forEach(function (r) {
+    if (r.ownerType === "user" && isBanned(r.ownerPub)) return;
     replies.appendChild(renderReply(boardId, thread, r));
   });
 

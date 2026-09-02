@@ -132,7 +132,7 @@ export function publishProfile(input) {
 
 /* ---------- consultas (lectura de vuelta) ---------- */
 
-function queryEvents(filter, opts) {
+export function queryEvents(filter, opts) {
   return getPool().then(function (p) {
     return p.pool.querySync(RELAYS, filter, { maxWait: (opts && opts.maxWait) || 7000 });
   });
@@ -234,6 +234,30 @@ export function subscribeBoardPosts(boardId, onEvent) {
           seen[ev.id] = true;
           var post = parsePostEvent(p.lib, ev);
           if (post && post.board === boardId) onEvent(post);
+        },
+        maxWait: 9000
+      }
+    );
+  });
+}
+
+/* suscripcion en vivo generica a un tipo de evento (se usa para la lista de
+   baneos del admin: kind 39000 firmado por ADMIN_NPUB). Mismo patron que
+   subscribeBoardPosts. Devuelve Promise<closer> con .close(). */
+export function subscribeKindEvents(filter, onEvent) {
+  return getPool().then(function (p) {
+    var seen = {};
+    return p.pool.subscribeMany(
+      RELAYS,
+      [filter],
+      {
+        onevent: function (ev) {
+          try {
+            if (!p.lib.verifyEvent(ev)) return;
+          } catch (e) { return; }
+          if (seen[ev.id]) return;
+          seen[ev.id] = true;
+          onEvent(ev);
         },
         maxWait: 9000
       }

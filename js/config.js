@@ -2,6 +2,12 @@
 
 export var STORAGE_KEY = "forchan_data_v1";
 
+/* moderacion: npub del admin (debe coincidir con la de Admin_forum/js/config.js).
+   Solo los eventos de baneo (kind 39000) firmados por esta clave se aplican.
+   BANNED_NPUBS = lista base de respaldo (se suma a la publicada por el panel). */
+export var ADMIN_NPUB = "";
+export var BANNED_NPUBS = [];
+
 export var BOARDS = [
   { id: "g",  name: "General",      desc: "Charlas de todo tipo." },
   { id: "t",  name: "Tecnologia",   desc: "Gadgets, noticias y hardware." },

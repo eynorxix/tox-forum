@@ -2,6 +2,7 @@
 import { BOARDS } from "../config.js";
 import { state, getBoard } from "../store/db.js";
 import { openProfile } from "./appshell.js";
+import { isBanned } from "../store/moderation.js";
 
 export function renderHome() {
   var wrap = document.createElement("div");
@@ -41,6 +42,7 @@ export function renderHome() {
     Object.keys(state.users || {}).forEach(function (pubHex) {
       var u = state.users[pubHex];
       if (!u) return;
+      if (isBanned(u.pubHex)) return;
       var qq = q;
       var hay = ((u.name || "") + " " + (u.npub || "")).toLowerCase();
       if (hay.indexOf(qq) >= 0) {
