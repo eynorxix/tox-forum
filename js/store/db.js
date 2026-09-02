@@ -286,22 +286,29 @@ function isExpired(post) {
   return Date.now() - post.ts > ANON_TTL;
 }
 
-/* limpia posts anonimos expirados (y sus respuestas expiradas) */
+/* limpia posts anonimos expirados (y sus respuestas expiradas).
+   Devuelve true si elimino algo (para decidir si hace falta re-renderizar). */
 export function purgeExpired() {
+  var changedAny = false;
   BOARDS.forEach(function (b) {
     var coll = getBoard(b.id);
     for (var i = coll.length - 1; i >= 0; i--) {
       var th = coll[i];
       if (th.ownerType !== "user" && isExpired(th)) {
         coll.splice(i, 1);
+        changedAny = true;
         continue;
       }
       for (var j = th.replies.length - 1; j >= 0; j--) {
         var r = th.replies[j];
-        if (r.ownerType !== "user" && isExpired(r)) th.replies.splice(j, 1);
+        if (r.ownerType !== "user" && isExpired(r)) {
+          th.replies.splice(j, 1);
+          changedAny = true;
+        }
       }
     }
   });
+  return changedAny;
 }
 
 export function myPosts() {

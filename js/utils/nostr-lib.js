@@ -50,3 +50,10 @@ export function getNip19() {
   }
   return nip19Promise;
 }
+
+/* precarga la libreria en segundo plano al arrancar, para que la primera
+   generacion de claves / publicacion sea inmediata (cache caliente) */
+export function warmNostr() {
+  loadNostrLib().catch(function () {});
+  getNip19().catch(function () {});
+}

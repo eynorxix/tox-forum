@@ -77,12 +77,15 @@ export function renderProfile(boardId, user) {
 
   var socials = document.createElement("div");
   socials.className = "socials";
-  user.socials.forEach(function (s) {
+  (user.socials || []).forEach(function (s) {
+    var label = s && (Array.isArray(s) ? s[0] : s.label);
+    var url = s && (Array.isArray(s) ? s[1] : s.url);
+    if (!label || !url) return;
     var a = document.createElement("a");
-    a.href = s.url;
+    a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
-    a.textContent = s.label;
+    a.textContent = label;
     socials.appendChild(a);
   });
 

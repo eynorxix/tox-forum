@@ -4,6 +4,7 @@ import { generateKeys } from "../utils/nostr.js";
 import { publishProfile } from "../utils/relays.js";
 import { openMine, refresh, navTo } from "./appshell.js";
 import { refreshChip } from "./nav.js";
+import { syncMyPosts } from "../utils/relay-sync.js";
 
 var backdrop = null;
 
@@ -308,12 +309,16 @@ function buildLogin() {
     login(nsec.value.trim()).then(function (ok) {
       btn.disabled = false;
       if (ok) {
-        backdrop.remove();
-        backdrop = null;
-        refreshChip();
-        openMine();
-        refresh();
-        navTo("home");
+        var finish = function () {
+          backdrop.remove();
+          backdrop = null;
+          refreshChip();
+          openMine();
+          refresh();
+          navTo("home");
+        };
+        /* restaura los posts del usuario publicados en relays (otro dispositivo) */
+        syncMyPosts().then(finish, finish);
       } else {
         status.textContent = "Clave nsec no valida.";
         status.style.color = "var(--accent)";

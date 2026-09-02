@@ -10,6 +10,7 @@ import { renderProfile, renderMyProfile } from "./profile.js";
 import { renderRightPanel } from "./rightpanel.js";
 import { openAuth } from "./auth.js";
 import { cancelAnims, getChartType, animateBars, setChart } from "../domain/universe.js";
+import { syncBoard, watchBoard, unwatchBoard } from "../utils/relay-sync.js";
 
 export function go(view) {
   session.myProfileView = false;
@@ -18,6 +19,36 @@ export function go(view) {
   refreshChip();
   renderNav();
   render();
+  window.scrollTo(0, 0);
+}
+
+/* ---- suscripcion en vivo del foro abierto ---- */
+var activeWatch = null;
+var liveRenderTimer = null;
+
+function scheduleLiveRender() {
+  if (liveRenderTimer) return;
+  liveRenderTimer = setTimeout(function () {
+    liveRenderTimer = null;
+    var ok = activeWatch && session.currentView === activeWatch &&
+      !session.profileView && !session.myProfileView &&
+      session.currentView !== "home" && session.currentView !== "seguidos";
+    if (ok) render();
+  }, 300);
+}
+
+function ensureLiveWatch(syncCtx) {
+  if (activeWatch && activeWatch !== syncCtx) unwatchBoard(activeWatch);
+  if (activeWatch === syncCtx) return;
+  activeWatch = syncCtx;
+  watchBoard(syncCtx, scheduleLiveRender);
+}
+
+function stopLiveWatch() {
+  if (activeWatch) {
+    unwatchBoard(activeWatch);
+    activeWatch = null;
+  }
 }
 
 export function render() {
@@ -51,6 +82,19 @@ export function render() {
     main.appendChild(layout);
   }
   bindQuotelinks(main);
+  /* en una vista de foro: suscripcion en vivo a posts nuevos (Nostr) y un
+     sondeo inicial como respaldo */
+  if (!session.myProfileView && !session.profileView &&
+      session.currentView !== "home" && session.currentView !== "seguidos") {
+    var syncCtx = session.currentView;
+    ensureLiveWatch(syncCtx);
+    syncBoard(syncCtx, function (changed) {
+      if (changed && session.currentView === syncCtx &&
+          !session.profileView && !session.myProfileView) render();
+    });
+  } else {
+    stopLiveWatch();
+  }
   if (session.currentView === "d" && !session.profileView && !session.myProfileView && session.currentView !== "home") {
     if (getChartType() === "barras") {
       animateBars();
@@ -59,7 +103,6 @@ export function render() {
       if (tbs) setChart(getChartType(), tbs);
     }
   }
-  window.scrollTo(0, 0);
 }
 
 export function showProfile(boardId, user) {
@@ -67,6 +110,7 @@ export function showProfile(boardId, user) {
   session.currentView = boardId;
   renderNav();
   render();
+  window.scrollTo(0, 0);
 }
 
 export function showMyProfile() {
@@ -81,4 +125,5 @@ export function showMyProfile() {
   refreshChip();
   renderNav();
   render();
+  window.scrollTo(0, 0);
 }

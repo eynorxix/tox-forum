@@ -27,6 +27,21 @@ function b64Utf8(str) {
   return btoa(binary);
 }
 
+/* fetch con timeout: si un servidor Blossom se cuelga, aborta rapido y la
+   cadena pasa al siguiente servidor en vez de quedarse esperando para siempre. */
+function fetchTimeout(url, options, ms) {
+  if (typeof AbortController === "undefined") return fetch(url, options);
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, ms);
+  return fetch(url, options).then(function (res) {
+    clearTimeout(timer);
+    return res;
+  }, function (err) {
+    clearTimeout(timer);
+    throw err;
+  });
+}
+
 /* sube una imagen a Blossom. devuelve Promise<url> */
 export function uploadImage(file, onProgress) {
   return loadNostrLib().then(function (lib) {
@@ -55,11 +70,11 @@ export function uploadImage(file, onProgress) {
           return acc.catch(function (err) {
             lastError = err;
             if (onProgress) onProgress("Subiendo a " + server.replace("https://", "") + "...");
-            return fetch(server + "/upload", {
+            return fetchTimeout(server + "/upload", {
               method: "PUT",
               headers: { Authorization: auth, "Content-Type": contentType },
               body: bytes
-            }).then(function (res) {
+            }, 15000).then(function (res) {
               if (!res.ok) throw new Error(server + " respondio " + res.status);
               return res.json().then(function (data) {
                 if (data.url) return data.url;

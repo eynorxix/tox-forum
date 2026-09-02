@@ -184,7 +184,7 @@ function renderThread(boardId, thread) {
   var replies = document.createElement("div");
   replies.className = "replies";
   thread.replies.forEach(function (r) {
-    replies.appendChild(renderReply(thread, r));
+    replies.appendChild(renderReply(boardId, thread, r));
   });
 
   var rf = makeReplyForm(boardId, thread);
@@ -223,7 +223,7 @@ function postHead(post) {
   return head;
 }
 
-function renderReply(thread, reply) {
+function renderReply(boardId, thread, reply) {
   var div = document.createElement("div");
   div.className = "reply";
   div.id = "reply-" + reply.no;
@@ -329,4 +329,13 @@ export function bindQuotelinks(root) {
       highlightPost(el.dataset.quote);
     });
   });
+}
+
+/* resalta y lleva al hilo (o respuesta) indicado por su No. */
+function highlightPost(no) {
+  var el = document.getElementById("thread-" + no) || document.getElementById("reply-" + no);
+  if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.style.boxShadow = "0 0 0 3px var(--accent)";
+  setTimeout(function () { el.style.boxShadow = ""; }, 1500);
 }

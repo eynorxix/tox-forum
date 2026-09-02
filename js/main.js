@@ -6,6 +6,8 @@ import { go, render, showProfile, showMyProfile } from "./ui/view.js";
 import { renderNav, refreshChip } from "./ui/nav.js";
 import { seedDemo } from "./domain/seed.js";
 import { seedCollabs } from "./store/collabs.js";
+import { warmNostr } from "./utils/nostr-lib.js";
+import { syncBoard, isWatchingBoard } from "./utils/relay-sync.js";
 import { closeImage } from "./ui/lightbox.js";
 import { closeForos, isForosOpen } from "./ui/foros.js";
 import { closeAuth, isAuthOpen } from "./ui/auth.js";
@@ -89,13 +91,30 @@ document.addEventListener("click", function (ev) {
   }
 });
 
-/* los posts anonimos expiran a los 10 minutos */
+/* los posts anonimos expiran a los 10 minutos. Solo re-renderiza si de verdad
+   cambio algo: así la lectura no se interrumpe cada minuto. */
 setInterval(function () {
-  purgeExpired();
+  var removed = purgeExpired();
   syncFollowedNotifications();
   refreshNotifBadge();
-  if (session.currentView) render();
+  if (session.currentView) {
+    if (removed) {
+      render();
+    } else if (session.currentView !== "home" && session.currentView !== "seguidos" &&
+               !session.profileView && !session.myProfileView) {
+      var bid = session.currentView;
+      /* la suscripcion en vivo ya trae posts nuevos: solo sondeamos de respaldo
+         por si la conexion a los relays se cayo sin deteccion */
+      if (!isWatchingBoard(bid)) {
+        syncBoard(bid, function (changed) { if (changed && session.currentView === bid) render(); });
+      }
+    }
+  }
 }, 60000);
+
+/* precarga nostr-tools desde el CDN en segundo plano para que registrar/
+   publicar no tarde (la primera vez era donde se veia el "Generando claves...") */
+warmNostr();
 
 renderNav();
 refreshChip();
