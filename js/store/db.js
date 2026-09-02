@@ -1,6 +1,6 @@
 /* ===== capa de datos: estado persistente, identidad y acceso al almacen ===== */
 import { STORAGE_KEY, BOARDS } from "../config.js";
-import { importNsec, activateFromB64 } from "../utils/nostr.js";
+import { importNsec, activateFromB64, clearActiveKeys } from "../utils/nostr.js";
 import { fetchNames, publishProfile } from "../utils/relays.js";
 import { isBanned } from "./moderation.js";
 
@@ -49,8 +49,6 @@ if (!state.following) state.following = [];  /* pubHex que el usuario actual sig
 if (!state.notifications) state.notifications = [];
 if (!state.savedForums) state.savedForums = []; /* foros guardados */
 if (!state.likes) state.likes = [];          /* ids de posts con like del usuario actual */
-
-const ANON_TTL = 10 * 60 * 1000; /* 10 minutos */
 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); }
@@ -156,6 +154,7 @@ export function login(nsec) {
 
 export function logout() {
   state.me = null;
+  clearActiveKeys();
   save();
 }
 
@@ -328,8 +327,9 @@ function ownPost(post) {
 }
 
 function isExpired(post) {
-  if (post.ownerType === "user") return false;
-  return Date.now() - post.ts > ANON_TTL;
+  /* los posts anonimos ya no caducan: se publican a relays con su identidad
+     anonima de dispositivo y persisten como los registrados. */
+  return false;
 }
 
 /* limpia posts anonimos expirados (y sus respuestas expiradas).

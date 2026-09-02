@@ -7,6 +7,7 @@ import { linksInText, fmtDate } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishPost, RELAYS } from "../utils/relays.js";
+import { ensureAnonKeys, getActivePubHex } from "../utils/nostr.js";
 import { toast } from "../utils/dom.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
@@ -123,7 +124,7 @@ function makePostForm(boardId) {
   if (anon) {
     var hint = document.createElement("p");
     hint.className = "form-hint";
-    hint.textContent = "Publicas como Anonimo: tu post desaparecera en 10 minutos.";
+    hint.textContent = "Publicas como Anonimo: tu post se publica y persiste para todos los visitantes.";
     form.appendChild(hint);
   }
 
@@ -140,23 +141,30 @@ function makePostForm(boardId) {
     if (subBtn) { subBtn.disabled = true; }
 
     var finish = function (image) {
-      var thread = {
-        no: nextNo(),
-        name: meName(),
-        ownerType: anon ? "anon" : "user",
-        ownerPub: anon ? null : (getMe() ? getMe().pubHex : null),
-        ownerName: anon ? null : (getMe() ? getMe().name : null),
-        comment: comment,
-        image: image || null,
-        ts: Date.now(),
-        replies: []
-      };
-      getBoard(boardId).push(thread);
-      save();
-      if (!anon) {
+      /* anonimo: identidad anonima de este dispositivo (para persistir a relays);
+         usuario: identidad con clave real. Ambos publican a los relays. */
+      var publish = function (pubHex) {
+        var thread = {
+          no: nextNo(),
+          name: meName(),
+          ownerType: anon ? "anon" : "user",
+          ownerPub: pubHex || null,
+          ownerName: anon ? null : (getMe() ? getMe().name : null),
+          comment: comment,
+          image: image || null,
+          ts: Date.now(),
+          replies: []
+        };
+        getBoard(boardId).push(thread);
+        save();
         publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image }).then(reportPublish);
+        refresh();
+      };
+      if (anon) {
+        ensureAnonKeys().then(function () { publish(getActivePubHex()); });
+      } else {
+        publish(getMe() ? getMe().pubHex : null);
       }
-      refresh();
     };
 
     if (file) {
@@ -315,22 +323,27 @@ function makeReplyForm(boardId, thread) {
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
     var finish = function (image) {
-      var reply = {
-        no: nextNo(),
-        name: meName(),
-        ownerType: anon ? "anon" : "user",
-        ownerPub: anon ? null : (getMe() ? getMe().pubHex : null),
-        ownerName: anon ? null : (getMe() ? getMe().name : null),
-        comment: comment,
-        image: image || null,
-        ts: Date.now()
-      };
-      thread.replies.push(reply);
-      save();
-      if (!anon) {
+      var publish = function (pubHex) {
+        var reply = {
+          no: nextNo(),
+          name: meName(),
+          ownerType: anon ? "anon" : "user",
+          ownerPub: pubHex || null,
+          ownerName: anon ? null : (getMe() ? getMe().name : null),
+          comment: comment,
+          image: image || null,
+          ts: Date.now()
+        };
+        thread.replies.push(reply);
+        save();
         publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no }).then(reportPublish);
+        refresh();
+      };
+      if (anon) {
+        ensureAnonKeys().then(function () { publish(getActivePubHex()); });
+      } else {
+        publish(getMe() ? getMe().pubHex : null);
       }
-      refresh();
     };
     if (file) {
       handleImageUpload(file, finish, function () {

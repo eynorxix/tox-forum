@@ -25,7 +25,9 @@ function nameFor(pubHex) {
   if (namesCache[pubHex]) return namesCache[pubHex];
   var u = state.users && state.users[pubHex];
   if (u && u.name) return u.name;
-  return pubHex.slice(0, 10);
+  /* pubkey que no es un usuario registrado (o un anonimo): lo mostramos como
+     Anonimo, no como un id hexadecimal feo. */
+  return "Anonimo";
 }
 
 function buildPost(post, isThread) {

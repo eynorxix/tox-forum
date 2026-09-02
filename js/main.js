@@ -12,6 +12,7 @@ import { closeAuth, isAuthOpen } from "./ui/auth.js";
 import { closeSettings, isSettingsOpen } from "./ui/settings.js";
 import { acHide, isAcOpen } from "./utils/autocomplete.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
+import { activateAnonIfNoUser } from "./utils/nostr.js";
 import {
   toggleNotifications, closeNotifications, isNotifOpen, refreshNotifBadge,
   openSaved, closeSaved, isSavedOpen, syncFollowedNotifications
@@ -119,6 +120,10 @@ warmNostr();
    se purgan los posts guardados y se re-renderiza la vista actual */
 setBansRefresh(render);
 ensureBanInit();
+
+/* identidad anonima: aunque el visitante no inicie sesion, prepara sus claves
+   anonimas de dispositivo para que publique y persista a los relays */
+activateAnonIfNoUser();
 
 renderNav();
 refreshChip();
