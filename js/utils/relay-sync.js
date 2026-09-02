@@ -9,6 +9,7 @@
 import { state, save, getBoard, getMe } from "../store/db.js";
 import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts } from "./relays.js";
 import { isBanned } from "../store/moderation.js";
+import { voteHashtags } from "../domain/voting.js";
 
 var syncing = {};
 var lastSync = {};
@@ -43,33 +44,44 @@ function buildPost(post, isThread) {
 }
 
 /* fusiona posts (hilos primero, luego respuestas) dentro de un foro.
-   Devuelve true si algo cambio. La fuente local gana en caso de conflicto. */
+   Devuelve true si algo cambio. La fuente local gana en caso de conflicto.
+   Usa clave compuesta pubkey:no para evitar colisiones entre usuarios distintos
+   con el mismo 'no' local. */
 function mergeBoard(boardId, posts) {
   /* los posts de autores baneados no se fusionan (moderacion del admin) */
   posts = (posts || []).filter(function (p) { return !isBanned(p.pubkey); });
   var coll = getBoard(boardId);
-  var existing = {};
-  coll.forEach(function (th) { existing[th.no] = th; });
+  var existing = {};       /* clave "pubkey:no" → thread (dedup de hilos) */
+  var threadsByNo = {};    /* clave "no" → thread (adjuntar respuestas) */
+  coll.forEach(function (th) {
+    existing[th.ownerPub + ":" + th.no] = th;
+    threadsByNo[th.no] = th;
+  });
   var changed = false;
   var unknown = [];
 
   /* hilos */
   posts.filter(function (p) { return p.threadNo == null; }).forEach(function (p) {
     if (p.board !== boardId) return;
-    if (existing[p.no]) return;
+    var key = p.pubkey + ":" + p.no;
+    if (existing[key]) return;
     var th = buildPost(p, true);
     coll.push(th);
-    existing[p.no] = th;
+    existing[key] = th;
+    threadsByNo[p.no] = th;
+    voteHashtags(p.content);
     changed = true;
   });
 
   /* respuestas: solo si el hilo existe localmente (o se inserto arriba) */
   posts.filter(function (p) { return p.threadNo != null; }).forEach(function (p) {
     if (p.board !== boardId) return;
-    var th = existing[p.threadNo];
+    var th = threadsByNo[p.threadNo];
     if (!th) return;
-    if (th.replies.some(function (r) { return r.no === p.no; })) return;
+    var rKey = p.pubkey + ":" + p.no;
+    if (th.replies.some(function (r) { return (r.ownerPub + ":" + r.no) === rKey; })) return;
     th.replies.push(buildPost(p, false));
+    voteHashtags(p.content);
     changed = true;
   });
 
