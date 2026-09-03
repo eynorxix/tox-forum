@@ -1,13 +1,11 @@
 /* ===== settings del perfil: layout con secciones separadas =====
    Agrupa en un solo lugar: editar perfil, claves (nsec/npub) y foros.
    El perfil publico solo muestra avatar, nombre, descripcion, publicar y posts. */
-import { getMe, save, logout, myMainForum, myRegistered } from "../store/db.js";
-import { createForum, renameForum, setForumStatus, deleteForum, getCreatedForums } from "../store/db.js";
+import { getMe, save, logout, createForum, renameForum, setForumStatus, deleteForum, getCreatedForums } from "../store/db.js";
 import { session } from "../store/session.js";
 import { fileToDataURL, toast } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishProfile } from "../utils/relays.js";
-import { buildGrid } from "./foros.js";
 import { refreshChip } from "./nav.js";
 import { refresh, navTo } from "./appshell.js";
 
@@ -240,16 +238,6 @@ export function openSettings() {
   createRow.appendChild(nameIn);
   createRow.appendChild(createBtn);
   pForos.appendChild(createRow);
-
-  /* nota: foros registrados (principal + secundarios) */
-  var regWrap = document.createElement("div");
-  regWrap.className = "fo-grid-wrap";
-  var regIntro = document.createElement("p");
-  regIntro.className = "fo-info";
-  regIntro.textContent = "Tus registros en los foros del sitio (principal y secundarios):";
-  regWrap.appendChild(regIntro);
-  regWrap.appendChild(buildGrid(myMainForum(), myRegistered(), ""));
-  pForos.appendChild(regWrap);
 
   /* lista de foros creados por el usuario actual con edicion */
   var createdWrap = document.createElement("div");
