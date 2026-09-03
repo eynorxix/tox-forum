@@ -677,6 +677,35 @@ textarea::placeholder {
   padding: 2px 2px 10px;
 }
 .rp-sec-body.open { display: block; }
+.rp-quickforos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 4px 0;
+}
+.rp-quickforos a {
+  font-family: "Courier New", monospace;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+}
+.rp-quickforos a:hover { text-decoration: underline; }
+.rp-reclist {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.rp-reclist li {
+  padding: 4px 2px;
+  border-bottom: 1px dashed var(--border);
+}
+.rp-reclist li:last-child { border-bottom: none; }
+.rp-reclist a {
+  color: var(--text-side);
+  text-decoration: none;
+  font-size: 14px;
+}
+.rp-reclist a:hover { color: var(--accent); }
 .rp-text {
   font-size: 13px;
   color: var(--muted);

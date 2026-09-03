@@ -1,5 +1,5 @@
-/* ===== panel derecho: secciones retractiles (Redes, Donar, Colaborar) ===== */
-import { BLOG_ASSETS } from "../config.js";
+/* ===== panel derecho: foros rapidos + foros recomendados + secciones ===== */
+import { BLOG_ASSETS, BOARDS } from "../config.js";
 
 function copyText(text, btn) {
   function done() {
@@ -74,13 +74,9 @@ export function renderRightPanel() {
   var rp = document.createElement("aside");
   rp.className = "rightpanel";
 
-  var title = document.createElement("h3");
-  title.className = "rp-title";
-  title.textContent = "Secciones";
-
-  function mkSection(label, openDefault) {
-    var sec = document.createElement("section");
-    sec.className = "rp-section";
+  function mkLayout(label, openDefault) {
+    var lay = document.createElement("section");
+    lay.className = "rp-section";
     var head = document.createElement("button");
     head.type = "button";
     head.className = "rp-sec-head";
@@ -90,17 +86,59 @@ export function renderRightPanel() {
     if (openDefault) body.classList.add("open");
     head.addEventListener("click", function () {
       body.classList.toggle("open");
-      sec.classList.toggle("open", body.classList.contains("open"));
+      lay.classList.toggle("open", body.classList.contains("open"));
     });
-    sec.appendChild(head);
-    sec.appendChild(body);
-    return { sec: sec, body: body };
+    lay.appendChild(head);
+    lay.appendChild(body);
+    return { lay: lay, body: body };
   }
 
-  // Redes
-  var mRedes = mkSection("Redes", false);
-  var secRedes = mRedes.sec;
-  var pRedes = mRedes.body;
+  /* ---- 1) foros rapidos (abreviados tipo 4chan) ---- */
+  var layForos = mkLayout("Foros", true);
+  var forosBody = layForos.body;
+  var rap = document.createElement("div");
+  rap.className = "rp-quickforos";
+  BOARDS.forEach(function (b) {
+    var a = document.createElement("a");
+    a.dataset.board = b.id;
+    a.title = b.name;
+    a.textContent = b.id + "/";
+    rap.appendChild(a);
+  });
+  forosBody.appendChild(rap);
+
+  /* ---- 2) foros recomendados (UI demo de creadores) ---- */
+  var layRec = mkLayout("Foros Recomendados", false);
+  var recBody = layRec.body;
+  var recIntro = document.createElement("p");
+  recIntro.className = "rp-text";
+  recIntro.textContent = "Foros creados por la comunidad:";
+  recBody.appendChild(recIntro);
+  var recList = document.createElement("ul");
+  recList.className = "rp-reclist";
+  [
+    "or/ - Origen y Misterio",
+    "gz/ - Gamer Zone",
+    "ch/ - Cocina en Casa",
+    "mo/ - Moda Urbana",
+    "ca/ - Cafe y Radar"
+  ].forEach(function (name) {
+    var li = document.createElement("li");
+    var a = document.createElement("a");
+    a.href = "#";
+    a.textContent = name;
+    li.appendChild(a);
+    recList.appendChild(li);
+  });
+  recBody.appendChild(recList);
+  var recNote = document.createElement("p");
+  recNote.className = "rp-text";
+  recNote.textContent = "(Los creadores publicaran aqui su foro.)";
+  recBody.appendChild(recNote);
+
+  /* ---- 3) secciones (Redes, Donar, Colaborar) ---- */
+  var layRedes = mkLayout("Redes", false);
+  var pRedes = layRedes.body;
   var t1 = document.createElement("p");
   t1.className = "rp-text";
   t1.textContent = "Sigueme en mis redes para seguir mis proyectos y novedades:";
@@ -110,7 +148,7 @@ export function renderRightPanel() {
   var links = [
     ["X", "https://x.com/eynor_xix"],
     ["Reddit", "https://www.reddit.com/u/eynorxix/s/oZCR0PIqin"],
-    ["Blog (Nostr)", "https://eynorxix.github.io/Blog/?u=npub1zdy6e00hkvpus0wwt4zhghp22cax9zf2xye6ghklhqc4mr2lnxvqkz7f0s"]
+    ["Blog (Nostr)", "https://eynorxix.github.io/Blog/?u=npub1zdy6e00hkvpus0wwt4zhghp22cax9zf2xye6ghklhqc4mr2lnxvqkz7f0"]
   ];
   links.forEach(function (l) {
     var a = document.createElement("a");
@@ -122,10 +160,8 @@ export function renderRightPanel() {
   });
   pRedes.appendChild(soc);
 
-  // Donar
-  var mDonar = mkSection("Donar", false);
-  var secDonar = mDonar.sec;
-  var pDonar = mDonar.body;
+  var layDonar = mkLayout("Donar", false);
+  var pDonar = layDonar.body;
   var t2 = document.createElement("p");
   t2.className = "rp-text";
   t2.textContent = "Demo: tu soporte ayuda a mantener estos proyectos vivos.";
@@ -133,10 +169,8 @@ export function renderRightPanel() {
   pDonar.appendChild(makeCryptoCard("Polygon (MATIC)", "qr-polygon.jpg", "0x6bDb191A11B247fDCCFFD66fe6092969Ab549378"));
   pDonar.appendChild(makeCryptoCard("Bitcoin (BTC)", "qr-bitcoin.jpg", "bc1q67aw0uuw2s4zq2cyp97qpnpf8zhusyvr5dzm2w"));
 
-  // Colaborar
-  var mCol = mkSection("Colaborar", false);
-  var secCol = mCol.sec;
-  var pCol = mCol.body;
+  var layCol = mkLayout("Colaborar", false);
+  var pCol = layCol.body;
   var t3 = document.createElement("p");
   t3.className = "rp-text";
   t3.textContent = "Obten tu perfil de colaborador en este foro:";
@@ -158,9 +192,10 @@ export function renderRightPanel() {
   contact.textContent = "Mas informacion y contacto";
   pCol.appendChild(contact);
 
-  rp.appendChild(title);
-  rp.appendChild(secRedes);
-  rp.appendChild(secDonar);
-  rp.appendChild(secCol);
+  rp.appendChild(layForos.lay);
+  rp.appendChild(layRec.lay);
+  rp.appendChild(layRedes.lay);
+  rp.appendChild(layDonar.lay);
+  rp.appendChild(layCol.lay);
   return rp;
 }
