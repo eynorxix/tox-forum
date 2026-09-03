@@ -327,8 +327,8 @@ function ownPost(post) {
 }
 
 function isExpired(post) {
-  /* los posts anonimos ya no caducan: se publican a relays con su identidad
-     anonima de dispositivo y persisten como los registrados. */
+  /* sin modo anonimo ya no hay posts que caduquen por TTL. Los posts viejos
+     guardados localmente se conservan. */
   return false;
 }
 

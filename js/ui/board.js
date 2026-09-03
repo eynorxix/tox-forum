@@ -7,7 +7,6 @@ import { linksInText, fmtDate } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishPost, RELAYS } from "../utils/relays.js";
-import { ensureAnonKeys, getActivePubHex } from "../utils/nostr.js";
 import { toast } from "../utils/dom.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
@@ -76,25 +75,23 @@ export function renderBoard(id) {
 
 function makePostForm(boardId) {
   var anon = isAnon();
-  var canPost = !anon || boardId === "g";
   var form = document.createElement("form");
   form.className = "post-form";
 
-  if (!canPost) {
+  /* para publicar hay que estar registrado/logueado: los anonimos solo leen. */
+  if (anon) {
     var blocked = document.createElement("p");
     blocked.className = "notice";
-    blocked.innerHTML = 'Como usuario an&oacute;nimo solo puedes publicar en el foro General. <a href="#" data-board="g">Ir a /g/</a> o <a href="#" id="reg-link">reg&iacute;strate</a> para publicar en todos los foros con im&aacute;genes.';
+    blocked.innerHTML = 'Para publicar reg&iacute;strate o inicia sesi&oacute;n. <a href="#" id="reg-link">Crear cuenta / entrar</a>.';
     form.appendChild(blocked);
     return form;
   }
 
   var tbl = document.createElement("table");
   var rows = [
+    ["Archivo", '<input type="file" name="file" accept="image/*">'],
     ["Comentario", '<textarea name="comment" placeholder="Escribe tu publicacion..." required></textarea>']
   ];
-  if (!anon) {
-    rows.unshift(["Archivo", '<input type="file" name="file" accept="image/*">']);
-  }
   rows.forEach(function (r) {
     var tr = document.createElement("tr");
     var td1 = document.createElement("td");
@@ -121,50 +118,35 @@ function makePostForm(boardId) {
 
   form.appendChild(tbl);
 
-  if (anon) {
-    var hint = document.createElement("p");
-    hint.className = "form-hint";
-    hint.textContent = "Publicas como Anonimo: tu post se publica y persiste para todos los visitantes.";
-    form.appendChild(hint);
-  }
-
   bindTagAC(form, form.querySelector('textarea[name="comment"]'), null);
 
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     var comment = form.elements.comment.value.trim();
-    var file = anon ? null : (form.elements.file ? form.elements.file.files[0] : null);
+    var file = form.elements.file.files[0];
     if (!comment && !file) return;
     voteHashtags(comment);
 
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
 
+    var me = getMe();
     var finish = function (image) {
-      /* anonimo: identidad anonima de este dispositivo (para persistir a relays);
-         usuario: identidad con clave real. Ambos publican a los relays. */
-      var publish = function (pubHex) {
-        var thread = {
-          no: nextNo(),
-          name: meName(),
-          ownerType: anon ? "anon" : "user",
-          ownerPub: pubHex || null,
-          ownerName: anon ? null : (getMe() ? getMe().name : null),
-          comment: comment,
-          image: image || null,
-          ts: Date.now(),
-          replies: []
-        };
-        getBoard(boardId).push(thread);
-        save();
-        publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image }).then(reportPublish);
-        refresh();
+      var thread = {
+        no: nextNo(),
+        name: meName(),
+        ownerType: "user",
+        ownerPub: me ? me.pubHex : null,
+        ownerName: me ? me.name : null,
+        comment: comment,
+        image: image || null,
+        ts: Date.now(),
+        replies: []
       };
-      if (anon) {
-        ensureAnonKeys().then(function () { publish(getActivePubHex()); });
-      } else {
-        publish(getMe() ? getMe().pubHex : null);
-      }
+      getBoard(boardId).push(thread);
+      save();
+      publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image }).then(reportPublish);
+      refresh();
     };
 
     if (file) {
@@ -278,27 +260,31 @@ function renderReply(boardId, thread, reply) {
 
 function makeReplyForm(boardId, thread) {
   var anon = isAnon();
-  var canPost = !anon || boardId === "g";
   var form = document.createElement("form");
   form.className = "reply-form";
   form.style.display = "none";
 
-  if (canPost) {
-    var rImg = document.createElement("div");
-    rImg.className = "row";
-    var inpImg = document.createElement("input");
-    inpImg.type = "file";
-    inpImg.accept = "image/*";
-    if (anon) { inpImg.style.display = "none"; }
-    rImg.appendChild(inpImg);
-    form.appendChild(rImg);
+  /* para responder hay que estar registrado/logueado: los anonimos solo leen. */
+  if (anon) {
+    var blocked = document.createElement("p");
+    blocked.className = "notice";
+    blocked.innerHTML = 'Para responder reg&iacute;strate o inicia sesi&oacute;n. <a href="#" id="reg-link">Crear cuenta / entrar</a>.';
+    form.appendChild(blocked);
+    return form;
   }
+
+  var rImg = document.createElement("div");
+  rImg.className = "row";
+  var inpImg = document.createElement("input");
+  inpImg.type = "file";
+  inpImg.accept = "image/*";
+  rImg.appendChild(inpImg);
+  form.appendChild(rImg);
 
   var rTxt = document.createElement("div");
   rTxt.className = "row";
   var ta = document.createElement("textarea");
-  ta.placeholder = canPost ? "Escribe tu respuesta..." : "Solo los usuarios registrados pueden responder aqui.";
-  ta.disabled = !canPost;
+  ta.placeholder = "Escribe tu respuesta...";
   rTxt.appendChild(ta);
 
   var rAct = document.createElement("div");
@@ -307,7 +293,6 @@ function makeReplyForm(boardId, thread) {
   btn.type = "submit";
   btn.textContent = "Enviar respuesta";
   rAct.appendChild(btn);
-  if (!canPost) { rAct.style.display = "none"; }
 
   form.appendChild(rTxt);
   form.appendChild(rAct);
@@ -317,33 +302,27 @@ function makeReplyForm(boardId, thread) {
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
     var comment = ta.value.trim();
-    var file = canPost && !anon && inpImg ? inpImg.files[0] : null;
+    var file = inpImg.files[0];
     if (!comment && !file) return;
     voteHashtags(comment);
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
+    var me = getMe();
     var finish = function (image) {
-      var publish = function (pubHex) {
-        var reply = {
-          no: nextNo(),
-          name: meName(),
-          ownerType: anon ? "anon" : "user",
-          ownerPub: pubHex || null,
-          ownerName: anon ? null : (getMe() ? getMe().name : null),
-          comment: comment,
-          image: image || null,
-          ts: Date.now()
-        };
-        thread.replies.push(reply);
-        save();
-        publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no }).then(reportPublish);
-        refresh();
+      var reply = {
+        no: nextNo(),
+        name: meName(),
+        ownerType: "user",
+        ownerPub: me ? me.pubHex : null,
+        ownerName: me ? me.name : null,
+        comment: comment,
+        image: image || null,
+        ts: Date.now()
       };
-      if (anon) {
-        ensureAnonKeys().then(function () { publish(getActivePubHex()); });
-      } else {
-        publish(getMe() ? getMe().pubHex : null);
-      }
+      thread.replies.push(reply);
+      save();
+      publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no }).then(reportPublish);
+      refresh();
     };
     if (file) {
       handleImageUpload(file, finish, function () {

@@ -7,62 +7,15 @@ import { loadNostrLib, getNip19 } from "./nostr-lib.js";
 var activeSec = null;   /* Uint8Array (32 bytes) de la clave privada actual */
 var activeHex = null;   /* pubHex correspondiente */
 
-/* identidad anonima persistente por dispositivo: sin login de usuario, igual se
-   puede publicar y persistir a los relays. Se genera una sola vez por navegador. */
-var ANON_KEY = "forosraiz_anon_keys";
-
 function bytesToB64(bytes) {
   let binary = "";
   bytes.forEach((b) => { binary += String.fromCharCode(b); });
   return btoa(binary);
 }
 
-function b64ToBytes(b64) {
-  try {
-    return new Uint8Array(atob(b64).split("").map(function (c) { return c.charCodeAt(0); }));
-  } catch (e) { return null; }
-}
+export function getActiveSec() { return activeSec; }
 
-/* prepara (o restaura) las claves anonimas de este dispositivo. Devuelve
-   Promise<boolean>. No es un login: es solo la identidad anonima local. */
-export function ensureAnonKeys() {
-  return loadNostrLib().then(function (lib) {
-    var raw = null;
-    try { raw = JSON.parse(localStorage.getItem(ANON_KEY) || "null"); } catch (e) {}
-    if (raw && raw.secB64 && raw.pubHex) {
-      var sk = b64ToBytes(raw.secB64);
-      if (sk && sk.length === 32) {
-        activeSec = sk;
-        activeHex = raw.pubHex;
-        return true;
-      }
-    }
-    var sk2 = lib.generateSecretKey();
-    var pub = lib.getPublicKey(sk2);
-    activeSec = sk2;
-    activeHex = pub;
-    try {
-      localStorage.setItem(ANON_KEY, JSON.stringify({
-        secB64: bytesToB64(sk2),
-        pubHex: pub
-      }));
-    } catch (e) {}
-    return true;
-  }).catch(function () { return false; });
-}
-
-export function getActiveSec() {
-  return activeSec || null;
-}
-
-export function getActivePubHex() { return activeHex || null; }
-
-/* al arrancar, si el usuario es anonimo (sin sesion) preparamos su
-   identidad anonima local para que pueda publicar y persistir. */
-export function activateAnonIfNoUser() {
-  if (activeSec) return Promise.resolve(true);
-  return ensureAnonKeys();
-}
+export function getActivePubHex() { return activeHex; }
 
 /* genera un par de claves reales: { nsec, npub, pubHex } */
 export function generateKeys() {
