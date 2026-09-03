@@ -55,7 +55,9 @@ function doPublish(draft) {
       });
     });
     return Promise.all(promises).then(function (oks) {
-      return oks.filter(Boolean).length;
+      var confirmed = oks.filter(Boolean).length;
+      console.log("[relays] publicado kind " + draft.kind + " confirmado en " + confirmed + "/" + RELAYS.length + " relays");
+      return confirmed;
     });
   }).catch(function () { return 0; });
 }
@@ -192,10 +194,11 @@ export function fetchBoardPosts(boardId, limit) {
           if (post && post.board === boardId) out.push(post);
         });
         out.sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
+        console.log("[relays] fetchBoardPosts(" + boardId + ") -> " + out.length + " posts de " + events.length + " eventos");
         return out;
       });
     })
-    .catch(function () { return []; });
+    .catch(function () { console.warn("[relays] error fetchBoardPosts(" + boardId + ")", arguments); return []; });
 }
 
 /* todos los posts de un usuario (pubHex) en todos los foros. */

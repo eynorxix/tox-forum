@@ -99,6 +99,7 @@ function mergeBoard(boardId, posts) {
     save();
     if (unknown.length) resolveNames(unknown, coll);
   }
+  console.log("[sync] mergeBoard(" + boardId + ") inserto cambios? " + changed + " (recibio " + posts.length + " posts)");
   return changed;
 }
 
