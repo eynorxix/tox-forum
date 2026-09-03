@@ -17,13 +17,17 @@ export function renderHome() {
   logo.textContent = "ForosRaiz";
   wrap.appendChild(logo);
 
-  /* presentacion: que es ForosRaiz y sus reglas */
+  /* presentacion: que es ForosRaiz y sus reglas (texto + imagen al lado derecho) */
   var about = document.createElement("div");
   about.className = "chan-about";
+  var aboutBody = document.createElement("div");
+  aboutBody.className = "chan-about-body";
+  var aboutText = document.createElement("div");
+  aboutText.className = "chan-about-textcol";
   var aboutT = document.createElement("div");
   aboutT.className = "chan-about-title";
   aboutT.textContent = "ForosRaiz";
-  about.appendChild(aboutT);
+  aboutText.appendChild(aboutT);
   var aboutP = document.createElement("p");
   aboutP.className = "chan-about-text";
   aboutP.innerHTML =
@@ -31,7 +35,7 @@ export function renderHome() {
     "No se recopilan datos de usuario ni se te rastrea: no hay cuentas obligatorias, no hay nube ni servidor central " +
     "sino relays neutrales donde tu mensaje es solo un evento cifrado y tuyo. Aqu&iacute; el <b>libre albedr&iacute;o</b> es esencial: " +
     "toda opini&oacute;n est&aacute; permitida, cada post responde a tu propia voluntad y tu identidad es una clave que s&oacute;lo t&uacute; posees.";
-  about.appendChild(aboutP);
+  aboutText.appendChild(aboutP);
   var aboutList = document.createElement("ul");
   aboutList.className = "chan-about-list";
   [
@@ -43,7 +47,14 @@ export function renderHome() {
     li.textContent = line;
     aboutList.appendChild(li);
   });
-  about.appendChild(aboutList);
+  aboutText.appendChild(aboutList);
+  aboutBody.appendChild(aboutText);
+  var aboutImg = document.createElement("img");
+  aboutImg.className = "chan-about-img";
+  aboutImg.src = "assets/forosraiz-logo.png";
+  aboutImg.alt = "ForosRaiz";
+  aboutBody.appendChild(aboutImg);
+  about.appendChild(aboutBody);
   wrap.appendChild(about);
 
   /* buscador tipo navegador: foros o usuarios */

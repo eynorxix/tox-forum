@@ -189,7 +189,28 @@ a:visited { color: var(--link-visited); }
   background: var(--bg-alt);
   padding: 14px 16px;
   margin: 6px 0 18px;
-  max-width: 760px;
+  max-width: 1000px;
+}
+.chan-about-body {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.chan-about-textcol { flex: 1 1 auto; min-width: 0; }
+.chan-about-img {
+  flex: 0 0 auto;
+  max-width: 340px;
+  max-height: 220px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+@media (max-width: 720px) {
+  .chan-about-body { flex-direction: column; align-items: flex-start; }
+  .chan-about-img { max-width: 100%; max-height: none; }
 }
 .chan-about-title {
   font-family: "Courier New", monospace;
