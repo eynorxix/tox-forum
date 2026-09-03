@@ -17,6 +17,35 @@ export function renderHome() {
   logo.textContent = "ForosRaiz";
   wrap.appendChild(logo);
 
+  /* presentacion: que es ForosRaiz y sus reglas */
+  var about = document.createElement("div");
+  about.className = "chan-about";
+  var aboutT = document.createElement("div");
+  aboutT.className = "chan-about-title";
+  aboutT.textContent = "ForosRaiz";
+  about.appendChild(aboutT);
+  var aboutP = document.createElement("p");
+  aboutP.className = "chan-about-text";
+  aboutP.innerHTML =
+    "ForosRaiz es una red de <b>canales de foro cifrados</b> y descentralizados sobre <b>Nostr</b>. " +
+    "No se recopilan datos de usuario ni se te rastrea: no hay cuentas obligatorias, no hay nube ni servidor central " +
+    "sino relays neutrales donde tu mensaje es solo un evento cifrado y tuyo. Aqu&iacute; el <b>libre albedr&iacute;o</b> es esencial: " +
+    "toda opini&oacute;n est&aacute; permitida, cada post responde a tu propia voluntad y tu identidad es una clave que s&oacute;lo t&uacute; posees.";
+  about.appendChild(aboutP);
+  var aboutList = document.createElement("ul");
+  aboutList.className = "chan-about-list";
+  [
+    "Todo foro y todo tema est\u00e1 permitido mientras no da\u00f1e a otro ser humano.",
+    "La opini\u00f3n, por dura o inc\u00f3moda que sea, siempre es bienvenida; el ataque personal a una persona, jam\u00e1s.",
+    "Lo \u00fanico prohibido es el acoso y los ataques contra personas."
+  ].forEach(function (line) {
+    var li = document.createElement("li");
+    li.textContent = line;
+    aboutList.appendChild(li);
+  });
+  about.appendChild(aboutList);
+  wrap.appendChild(about);
+
   /* buscador tipo navegador: foros o usuarios */
   var searchWrap = document.createElement("div");
   searchWrap.className = "home-search";
