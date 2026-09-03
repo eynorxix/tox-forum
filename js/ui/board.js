@@ -1,6 +1,6 @@
 /* ===== tablero: listado de hilos, posteo y respuestas ===== */
 import { BOARDS } from "../config.js";
-import { getBoard, nextNo, save, isAnon, meName, getMe, purgeExpired } from "../store/db.js";
+import { getBoard, nextNo, save, isAnon, meName, getMe, purgeExpired, canPostBoard } from "../store/db.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate } from "../utils/text.js";
@@ -123,6 +123,10 @@ function makePostForm(boardId) {
 
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
+    if (!canPostBoard(boardId)) {
+      toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
     var comment = form.elements.comment.value.trim();
     var file = form.elements.file.files[0];
     if (!comment && !file) return;
@@ -302,6 +306,10 @@ function makeReplyForm(boardId, thread) {
 
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
+    if (!canPostBoard(boardId)) {
+      toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
     var comment = ta.value.trim();
     var file = inpImg.files[0];
     if (!comment && !file) return;

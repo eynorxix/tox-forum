@@ -49,6 +49,8 @@ if (!state.following) state.following = [];  /* pubHex que el usuario actual sig
 if (!state.notifications) state.notifications = [];
 if (!state.savedForums) state.savedForums = []; /* foros guardados */
 if (!state.likes) state.likes = [];          /* ids de posts con like del usuario actual */
+if (!state.createdForums) state.createdForums = []; /* foros creados por usuarios del navegador */
+syncBoardsFromCreated();
 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); }
@@ -369,6 +371,120 @@ export function myPosts() {
     });
   });
   return out;
+}
+
+/* ===== foros creados por el usuario (max 3) =====
+   state.createdForums = [{ id, name, status, ownerPub, createdAt }]
+   status: "libre" (todos postean) | "restringido" (solo el creador postea).
+   Estos foros se sincronizan a BOARDS (cat "Otros") para poder navegarlos. */
+
+export function getCreatedForums() {
+  syncBoardsFromCreated();
+  return state.createdForums.slice();
+}
+
+function catOfCreated() { return "Otros"; }
+
+function syncBoardsFromCreated() {
+  var created = state.createdForums || [];
+  created.forEach(function (f) {
+    var exists = BOARDS.some(function (b) { return b.id === f.id; });
+    if (!exists) {
+      BOARDS.push({ id: f.id, name: f.name, desc: "Foro creado por un usuario.", cat: catOfCreated() });
+    } else {
+      var b = BOARDS.find(function (x) { return x.id === f.id; });
+      if (b && b.name !== f.name) b.name = f.name;
+    }
+  });
+}
+
+function createdIdUsed(id) {
+  return BOARDS.some(function (b) { return b.id === id; });
+}
+
+export function createForum(name) {
+  var me = state.me;
+  if (!me || !me.pubHex) return null;
+  var mine = state.createdForums.filter(function (f) { return f.ownerPub === me.pubHex; });
+  if (mine.length >= 3) return null; /* maximo 3 foros por usuario */
+  var n = state.createdForums.length + 1 + Math.floor(Math.random() * 100);
+  var id = "u" + n;
+  while (createdIdUsed(id)) id = "u" + (++n);
+  var f = {
+    id: id,
+    name: (name || "Mi foro").trim() || "Mi foro",
+    status: "libre",
+    ownerPub: me.pubHex,
+    createdAt: Date.now()
+  };
+  state.createdForums.push(f);
+  save();
+  syncBoardsFromCreated();
+  return f;
+}
+
+export function renameForum(id, name) {
+  var f = findCreated(id);
+  if (!f) return false;
+  f.name = (name || "").trim() || f.name;
+  save();
+  syncBoardsFromCreated();
+  return true;
+}
+
+export function setForumStatus(id, status) {
+  var f = findCreated(id);
+  if (!f) return false;
+  f.status = (status === "restringido") ? "restringido" : "libre";
+  save();
+  return true;
+}
+
+export function deleteForum(id) {
+  var me = state.me;
+  var idx = -1;
+  state.createdForums.forEach(function (f, i) {
+    if (f.id === id && (!me || f.ownerPub === me.pubHex)) idx = i;
+  });
+  if (idx < 0) return false;
+  state.createdForums.splice(idx, 1);
+  var bIdx = -1;
+  BOARDS.forEach(function (b, i) { if (b.id === id) bIdx = i; });
+  if (bIdx >= 0) BOARDS.splice(bIdx, 1);
+  delete state.boards[id];
+  save();
+  return true;
+}
+
+function findCreated(id) {
+  return (state.createdForums || []).find(function (f) { return f.id === id; });
+}
+
+export function isForumOwner(id) {
+  var f = findCreated(id);
+  return !!f && !!state.me && f.ownerPub === state.me.pubHex;
+}
+
+export function forumStatus(id) {
+  var f = findCreated(id);
+  return f ? f.status : "libre";
+}
+
+export function forumOwnerPub(id) {
+  var f = findCreated(id);
+  return f ? f.ownerPub : null;
+}
+
+export function isCreatedForum(id) {
+  return (state.createdForums || []).some(function (f) { return f.id === id; });
+}
+
+/* guard para postear: en un foro creado restringido solo puede postear el creador */
+export function canPostBoard(id) {
+  var f = (state.createdForums || []).find(function (x) { return x.id === id; });
+  if (!f) return true; /* foro normal del sitio, siempre se puede postear */
+  if (f.status !== "restringido") return true; /* libre: todos postean */
+  return !!state.me && f.ownerPub === state.me.pubHex; /* restringido: solo creador */
 }
 
 export { postAuthor, isExpired, ownPost };

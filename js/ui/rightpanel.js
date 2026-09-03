@@ -2,9 +2,10 @@
    - Layout 1 "Foros": nombres completos en 4 columnas, fijo (no retractil),
      con scroll interno y buscador + autocompletar.
    - Layout 2 "Foros Recomendados": mismo estilo, limite de 4 filas, con scroll
-     y buscador + autocompletar.
+     y buscador + autocompletar. Incluye foros creados por los usuarios.
    - Layout 3 "Secciones": retractil (Redes, Donar, Colaborar). */
 import { BLOG_ASSETS, BOARDS } from "../config.js";
+import { getCreatedForums } from "../store/db.js";
 
 function copyText(text, btn) {
   function done() {
@@ -237,6 +238,12 @@ export function renderRightPanel() {
     { id: "es", name: "Espiritualidad" },
     { id: "na", name: "Naturaleza" }
   ];
+  /* agrega los foros creados por los usuarios del navegador */
+  getCreatedForums().forEach(function (f) {
+    if (!recItems.some(function (r) { return r.id === f.id; })) {
+      recItems.push({ id: f.id, name: f.name });
+    }
+  });
   var layRec = buildForosLayout("Foros Recomendados", recItems, 4);
 
   /* ---- 3) secciones retractiles (Redes, Donar, Colaborar) ---- */

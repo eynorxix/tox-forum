@@ -1459,6 +1459,53 @@ textarea::placeholder {
 .settings-panel .logout-btn { width: 100%; border-color: var(--orange); color: var(--orange); }
 .settings-panel .logout-btn:hover { background: var(--orange); color: #16161e; }
 
+/* ===== administrador de foros creados (settings > foros) ===== */
+.settings-create-forum {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.settings-create-forum .settings-input { flex: 1; }
+.created-forums { margin-top: 6px; }
+.created-list { display: flex; flex-direction: column; gap: 12px; }
+.created-item {
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  padding: 10px 12px;
+}
+.created-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.created-tag { font-family: "Courier New", monospace; color: var(--accent); font-weight: bold; }
+.created-name { color: var(--text); font-weight: bold; }
+.created-edit { display: flex; gap: 8px; margin-bottom: 10px; }
+.created-edit .settings-input { flex: 1; }
+.created-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: 0 0 auto; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--muted); border-radius: 26px; transition: .2s;
+}
+.slider::before {
+  content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px;
+  background-color: #16161e; border-radius: 50%; transition: .2s;
+}
+.switch input:checked + .slider { background-color: var(--orange); }
+.switch input:checked + .slider::before { transform: translateX(20px); }
+.state-desc { font-size: 13px; color: var(--muted); }
+.state-val { font-family: "Courier New", monospace; font-size: 12px; color: var(--accent); }
+.btn2.danger { border-color: var(--red, #d33); color: var(--red, #d33); }
+.btn2.danger:hover { background: var(--red, #d33); color: #16161e; }
+.created-foot {
+  margin-top: 14px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 10px;
+}
+.created-rules { font-size: 12px; color: var(--text); margin-top: 4px; }
+
 /* ===== claves / settings en mi perfil ===== */
 .keys-sec {
   border: 1px solid var(--border);

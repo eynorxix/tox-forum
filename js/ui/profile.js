@@ -1,6 +1,6 @@
 /* ===== perfiles: vista de colaborador y mi perfil editable ===== */
 import { BOARDS } from "../config.js";
-import { state, getBoard, nextNo, save, getMe, myPosts, myMainForum, isAnon, ownPost, isFollowing, unfollowUser } from "../store/db.js";
+import { state, getBoard, nextNo, save, getMe, myPosts, myMainForum, isAnon, ownPost, isFollowing, unfollowUser, canPostBoard } from "../store/db.js";
 import { session } from "../store/session.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
@@ -175,12 +175,15 @@ export function renderMyProfile() {
   back.className = "back-btn";
   back.textContent = "← Volver al foro";
   back.addEventListener("click", function () { navTo(session.lastBoard); });
-  var settingsBtn = document.createElement("button");
-  settingsBtn.type = "button";
+  var settingsBtn = document.createElement("a");
   settingsBtn.className = "btn2 settings-btn";
   settingsBtn.textContent = "Configuracion";
   settingsBtn.title = "Editar perfil, claves y foros";
-  settingsBtn.addEventListener("click", function () { openSettings(); });
+  settingsBtn.href = "#";
+  settingsBtn.addEventListener("click", function (ev) {
+    ev.preventDefault();
+    openSettings();
+  });
   backRow.appendChild(back);
   backRow.appendChild(settingsBtn);
 
@@ -229,6 +232,10 @@ export function renderMyProfile() {
   qWrap.appendChild(qAct);
   bindTagAC(qWrap, qTa, null);
   qBtn.addEventListener("click", function () {
+    if (!canPostBoard(dest)) {
+      toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
     var qtext = qTa.value.trim();
     var qfile = qImg.files ? qImg.files[0] : null;
     if (!qtext && !qfile) return;

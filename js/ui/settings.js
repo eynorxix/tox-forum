@@ -2,6 +2,8 @@
    Agrupa en un solo lugar: editar perfil, claves (nsec/npub) y foros.
    El perfil publico solo muestra avatar, nombre, descripcion, publicar y posts. */
 import { getMe, save, logout, myMainForum, myRegistered } from "../store/db.js";
+import { createForum, renameForum, setForumStatus, deleteForum, getCreatedForums } from "../store/db.js";
+import { session } from "../store/session.js";
 import { fileToDataURL, toast } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishProfile } from "../utils/relays.js";
@@ -195,36 +197,183 @@ export function openSettings() {
   panels.claves = pClaves;
   win.appendChild(pClaves);
 
-  /* ----- panel: foros ----- */
+  /* ----- panel: foros (administrador de foros creados) ----- */
   var pForos = document.createElement("div");
   pForos.className = "settings-panel";
   pForos.dataset.spanel = "foros";
 
   var info = document.createElement("p");
   info.className = "fo-info";
-  info.textContent = "Un foro principal es donde tu perfil aparece en la lista de colaboradores. En los foros secundarios puedes publicar igual pero no apareces en la lista.";
+  info.textContent = "Aqui administras tus foros creados: puedes crear un foro, editar su nombre, cambiar su estado (libre o restringido) o eliminarlo. Maximo 3 foros por usuario.";
   pForos.appendChild(info);
 
-  var search = document.createElement("input");
-  search.type = "text";
-  search.className = "fo-search";
-  search.placeholder = "Buscar foro...";
-  pForos.appendChild(search);
-
-  var gwrap = document.createElement("div");
-  gwrap.className = "fo-grid-wrap";
-  gwrap.appendChild(buildGrid(myMainForum(), myRegistered(), ""));
-  pForos.appendChild(gwrap);
-
-  function rerenderGrid() {
-    if (!backdrop) return;
-    var q = search.value;
-    var fresh = buildGrid(myMainForum(), myRegistered(), q);
-    gwrap.innerHTML = "";
-    gwrap.appendChild(fresh);
+  /* formulario de creacion */
+  var createRow = document.createElement("div");
+  createRow.className = "settings-create-forum";
+  var nameIn = document.createElement("input");
+  nameIn.type = "text";
+  nameIn.className = "settings-input";
+  nameIn.placeholder = "Nombre de tu nuevo foro...";
+  var createBtn = document.createElement("button");
+  createBtn.type = "button";
+  createBtn.className = "btn2";
+  createBtn.textContent = "Crear foro";
+  createBtn.addEventListener("click", function () {
+    if (!getMe()) {
+      toast("Debes tener una cuenta para crear foros.", "warn");
+      return;
+    }
+    var mine = getCreatedForums().filter(function (f) { return getMe() && f.ownerPub === getMe().pubHex; });
+    if (mine.length >= 3) {
+      toast("Ya tienes el maximo de 3 foros", "warn");
+      return;
+    }
+    var name = nameIn.value.trim();
+    if (!name) { toast("Escribe un nombre para el foro", "warn"); return; }
+    var f = createForum(name);
+    if (!f) { toast("No se pudo crear el foro", "err"); return; }
+    nameIn.value = "";
+    toast("Foro /" + f.id + "/ creado y publicado en recomendados");
+    refreshForumList();
     refresh();
+  });
+  createRow.appendChild(nameIn);
+  createRow.appendChild(createBtn);
+  pForos.appendChild(createRow);
+
+  /* nota: foros registrados (principal + secundarios) */
+  var regWrap = document.createElement("div");
+  regWrap.className = "fo-grid-wrap";
+  var regIntro = document.createElement("p");
+  regIntro.className = "fo-info";
+  regIntro.textContent = "Tus registros en los foros del sitio (principal y secundarios):";
+  regWrap.appendChild(regIntro);
+  regWrap.appendChild(buildGrid(myMainForum(), myRegistered(), ""));
+  pForos.appendChild(regWrap);
+
+  /* lista de foros creados por el usuario actual con edicion */
+  var createdWrap = document.createElement("div");
+  createdWrap.className = "created-forums";
+  pForos.appendChild(createdWrap);
+
+  function refreshForumList() {
+    createdWrap.innerHTML = "";
+    var me = getMe();
+    var mine = getCreatedForums().filter(function (f) { return me && f.ownerPub === me.pubHex; });
+    if (!mine.length) {
+      var noC = document.createElement("p");
+      noC.className = "rp-text";
+      noC.textContent = "Aun no has creado ningun foro.";
+      createdWrap.appendChild(noC);
+    } else {
+      var list = document.createElement("div");
+      list.className = "created-list";
+      mine.forEach(function (f) {
+        var item = document.createElement("div");
+        item.className = "created-item";
+
+        var head = document.createElement("div");
+        head.className = "created-head";
+        var tag = document.createElement("span");
+        tag.className = "created-tag";
+        tag.textContent = "/" + f.id + "/";
+        head.appendChild(tag);
+        var nm = document.createElement("span");
+        nm.className = "created-name";
+        nm.textContent = f.name;
+        head.appendChild(nm);
+        item.appendChild(head);
+
+        /* editar nombre */
+        var editRow = document.createElement("div");
+        editRow.className = "created-edit";
+        var editIn = document.createElement("input");
+        editIn.type = "text";
+        editIn.className = "settings-input";
+        editIn.value = f.name;
+        var saveName = document.createElement("button");
+        saveName.type = "button";
+        saveName.className = "btn2";
+        saveName.textContent = "Guardar nombre";
+        saveName.addEventListener("click", function () {
+          if (renameForum(f.id, editIn.value.trim())) {
+          toast("Nombre actualizado");
+          refreshForumList();
+          refresh();
+        }
+      });
+      editRow.appendChild(editIn);
+      editRow.appendChild(saveName);
+      item.appendChild(editRow);
+
+      /* switch estado libre/restringido */
+      var stateRow = document.createElement("div");
+      stateRow.className = "created-state";
+      var swLab = document.createElement("label");
+      swLab.className = "switch";
+      var sw = document.createElement("input");
+      sw.type = "checkbox";
+      sw.checked = f.status === "restringido";
+      var swSpan = document.createElement("span");
+      swSpan.className = "slider";
+      swLab.appendChild(sw);
+      swLab.appendChild(swSpan);
+      sw.addEventListener("change", function () {
+        var st = sw.checked ? "restringido" : "libre";
+        setForumStatus(f.id, st);
+        stateDesc.textContent = st === "libre"
+          ? "Libre: cualquier usuario puede postear dentro del foro."
+          : "Restringido: solo el creador puede postear dentro del foro.";
+        toast("Estado: " + (st === "libre" ? "libre" : "restringido"));
+        refresh();
+      });
+      var stateDesc = document.createElement("span");
+      stateDesc.className = "state-desc";
+      stateDesc.textContent = f.status === "libre"
+        ? "Libre: cualquier usuario puede postear dentro del foro."
+        : "Restringido: solo el creador puede postear dentro del foro.";
+      var stateVal = document.createElement("span");
+      stateVal.className = "state-val";
+      stateVal.textContent = "/" + f.id + "/ " + (f.status === "libre" ? "libre" : "restringido");
+      stateRow.appendChild(swLab);
+      stateRow.appendChild(stateDesc);
+      stateRow.appendChild(stateVal);
+      item.appendChild(stateRow);
+
+      /* eliminar */
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn2 danger";
+      del.textContent = "Eliminar foro";
+      del.addEventListener("click", function () {
+        if (!window.confirm("Eliminar el foro /" + f.id + "/ ?")) return;
+        if (deleteForum(f.id)) {
+          toast("Foro eliminado");
+          refreshForumList();
+          if (session.currentView === f.id) navTo("home");
+          else refresh();
+        }
+      });
+      item.appendChild(del);
+
+      list.appendChild(item);
+      });
+      createdWrap.appendChild(list);
+    }
+
+    /* footer: responsabilidad del creador */
+    var foot = document.createElement("p");
+    foot.className = "created-foot";
+    foot.textContent = "Los foros creados con el fin que tenga seran responsabilidad del creador.";
+    createdWrap.appendChild(foot);
+
+    /* pie de reglas libre/restringido */
+    var rules = document.createElement("p");
+    rules.className = "created-rules";
+    rules.innerHTML = "<b>/libre/</b> los usuarios pueden postear &middot; <b>/restringido/</b> solo pueden ver pero no postear.";
+    createdWrap.appendChild(rules);
   }
-  search.addEventListener("input", rerenderGrid);
+  refreshForumList();
   panels.foros = pForos;
   win.appendChild(pForos);
 
@@ -237,7 +386,7 @@ export function openSettings() {
   /* el grid de foros ejecuta sus propios handlers (toggle/promote); aqui solo
      re-renderizamos el grid de settings despues del cambio en db */
   win.addEventListener("click", function () {
-    if (panels.foros.classList.contains("active")) setTimeout(rerenderGrid, 0);
+    if (panels.foros.classList.contains("active")) setTimeout(refreshForumList, 0);
   });
 
   function swapTab(name) {
