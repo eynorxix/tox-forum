@@ -134,9 +134,26 @@ export function publishProfile(input) {
 
 /* ---------- consultas (lectura de vuelta) ---------- */
 
+/* consulta eventos a los relays acumulando durante un periodo, y reintenta una
+   vez si no llego nada. `querySync` (nostr-tools) resuelve al cerrarse la
+   suscripcion (EOSE o timeout) y puede devolver vacio con conexion fria: por
+   eso aqui se da tiempo de sobra y un segundo intento, para que un visitante
+   nuevo con relays frios SI traiga el historial. Devuelve Promise<Event[]>. */
 export function queryEvents(filter, opts) {
-  return getPool().then(function (p) {
-    return p.pool.querySync(RELAYS, filter, { maxWait: (opts && opts.maxWait) || 7000 });
+  var wait = (opts && opts.maxWait) || 12000;
+  var attempts = (opts && opts.attempts) || 2;
+  function once() {
+    return getPool().then(function (p) {
+      return Promise.race([
+        p.pool.querySync(RELAYS, filter, { maxWait: wait }),
+        new Promise(function (res) { setTimeout(function () { res([]); }, wait + 1500); })
+      ]);
+    }).catch(function () { return []; });
+  }
+  return once().then(function (first) {
+    if (first && first.length) return first;
+    if (attempts > 1) return once();
+    return first;
   });
 }
 
