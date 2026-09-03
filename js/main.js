@@ -5,7 +5,7 @@ import { setHooks } from "./ui/appshell.js";
 import { go, render, showProfile, showMyProfile } from "./ui/view.js";
 import { renderNav, refreshChip } from "./ui/nav.js";
 import { warmNostr } from "./utils/nostr-lib.js";
-import { syncBoard, isWatchingBoard } from "./utils/relay-sync.js";
+import { syncBoard, isWatchingBoard, syncAllBoards } from "./utils/relay-sync.js";
 import { closeImage } from "./ui/lightbox.js";
 import { closeForos, isForosOpen } from "./ui/foros.js";
 import { closeAuth, isAuthOpen } from "./ui/auth.js";
@@ -124,3 +124,13 @@ renderNav();
 refreshChip();
 refreshNotifBadge();
 render();
+
+/* sincroniza todos los foros con los posts de Nostr al arrancar, para que un
+   visitante nuevo vea el historial de todos los foros (no solo el abierto).
+   Si la vista actual es home/seguidos, re-renderiza para actualizar los
+   conteos y el contenido que ya cargo. */
+syncAllBoards(function (changed) {
+  if (changed && (session.currentView === "home" || session.currentView === "seguidos")) {
+    render();
+  }
+});

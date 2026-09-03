@@ -10,6 +10,7 @@ import { state, save, getBoard, getMe } from "../store/db.js";
 import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts } from "./relays.js";
 import { isBanned } from "../store/moderation.js";
 import { voteHashtags } from "../domain/voting.js";
+import { BOARDS } from "../config.js";
 
 var syncing = {};
 var lastSync = {};
@@ -166,6 +167,26 @@ export function syncMyPosts() {
     });
     return changed;
   }).catch(function () { return false; });
+}
+
+/* sincroniza todos los foros con sus posts de Nostr. Se ejecuta al arrancar
+   para que un visitante nuevo (localStorage limpio) vea el historial completo
+   de todos los foros, no solo del que este abierto. onDone(changedTotal). */
+export function syncAllBoards(onDone) {
+  var ids = (BOARDS || []).map(function (b) { return b.id; });
+  var changedTotal = false;
+  var pending = ids.length;
+  if (!pending) {
+    if (onDone) onDone(false);
+    return;
+  }
+  ids.forEach(function (id) {
+    syncBoard(id, function (changed) {
+      if (changed) changedTotal = true;
+      pending--;
+      if (pending <= 0 && onDone) onDone(changedTotal);
+    });
+  });
 }
 
 /* ===== suscripcion en vivo =====
