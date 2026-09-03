@@ -200,9 +200,45 @@ function parsePostEvent(lib, ev) {
   };
 }
 
+/* consulta puntual de historial por suscripcion acumulativa: abre la misma
+   suscripcion que el en vivo (que sabemos SI trae los posts, `querySync` da 0
+   al cerrarse prematuro), deja que los relays envien la salida inicial durante
+   unos segundos y luego cierra. Asi un visitante nuevo con relays frios SI ve
+   el historial. Devuelve Promise<Event[]> sin duplicados. */
+function queryBySubscription(filter, wait) {
+  return getPool().then(function (p) {
+    return new Promise(function (resolve) {
+      var seen = {};
+      var events = [];
+      var timer = null;
+      var done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        if (timer) clearTimeout(timer);
+        try { closer.close(); } catch (e) {}
+        resolve(events);
+      }
+      var closer = null;
+      closer = p.pool.subscribeMany(RELAYS, [filter], {
+        onevent: function (ev) {
+          try {
+            if (!p.lib.verifyEvent(ev)) return;
+          } catch (e) { return; }
+          if (seen[ev.id]) return;
+          seen[ev.id] = true;
+          events.push(ev);
+        },
+        maxWait: wait || 10000
+      });
+      timer = setTimeout(finish, (wait || 10000) + 1500);
+    });
+  }).catch(function () { return []; });
+}
+
 /* posts (hilos y respuestas) de un foro, ordenados por fecha. */
 export function fetchBoardPosts(boardId, limit) {
-  return queryEvents({ kinds: [POST_KIND], "#board": [boardId], limit: limit || 200 })
+  return queryBySubscription({ kinds: [POST_KIND], "#board": [boardId], limit: limit || 200 }, 10000)
     .then(function (events) {
       return getPool().then(function (p) {
         var out = [];
@@ -220,7 +256,7 @@ export function fetchBoardPosts(boardId, limit) {
 
 /* todos los posts de un usuario (pubHex) en todos los foros. */
 export function fetchUserPosts(pubkeyHex, limit) {
-  return queryEvents({ kinds: [POST_KIND], authors: [pubkeyHex], limit: limit || 100 })
+  return queryBySubscription({ kinds: [POST_KIND], authors: [pubkeyHex], limit: limit || 200 }, 10000)
     .then(function (events) {
       return getPool().then(function (p) {
         var out = [];
