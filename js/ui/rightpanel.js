@@ -1,4 +1,9 @@
-/* ===== panel derecho: foros rapidos + foros recomendados + secciones ===== */
+/* ===== panel derecho: foros rapidos + foros recomendados + secciones =====
+   - Layout 1 "Foros": nombres completos en 4 columnas, fijo (no retractil),
+     con scroll interno y buscador + autocompletar.
+   - Layout 2 "Foros Recomendados": mismo estilo, limite de 4 filas, con scroll
+     y buscador + autocompletar.
+   - Layout 3 "Secciones": retractil (Redes, Donar, Colaborar). */
 import { BLOG_ASSETS, BOARDS } from "../config.js";
 
 function copyText(text, btn) {
@@ -70,6 +75,120 @@ function makeCryptoCard(name, qrFile, addr) {
   return card;
 }
 
+/* construye un layout fijo (no retractil) que lista foros en 4 columnas con
+   scroll interno, con buscador + autocompletar. items = [{id, name}].
+   limitFilas: si es >0, el grid se recorta a ese numero de filas (4 cols). */
+function buildForosLayout(label, items, limitFilas) {
+  var lay = document.createElement("section");
+  lay.className = "rp-section rp-fixed";
+
+  var head = document.createElement("div");
+  head.className = "rp-head";
+  head.textContent = label;
+  lay.appendChild(head);
+
+  var body = document.createElement("div");
+  body.className = "rp-fixed-body open";
+
+  /* buscador + autocompletar */
+  var searchWrap = document.createElement("div");
+  searchWrap.className = "rp-srch";
+  var input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "Buscar foro... (Tab autocompleta)";
+  var acList = document.createElement("div");
+  acList.className = "rp-ac";
+  searchWrap.appendChild(input);
+  searchWrap.appendChild(acList);
+  body.appendChild(searchWrap);
+
+  var grid = document.createElement("div");
+  grid.className = "rp-grid" + (limitFilas ? " rp-grid-limit" : "");
+  if (limitFilas) grid.style.setProperty("--rows", String(limitFilas));
+
+  function renderGrid(query) {
+    grid.innerHTML = "";
+    var q = (query || "").toLowerCase().trim();
+    items.forEach(function (b) {
+      if (q && ("/" + b.id + "/ " + b.name).toLowerCase().indexOf(q) < 0) return;
+      var a = document.createElement("a");
+      a.dataset.board = b.id;
+      a.title = b.name;
+      var bEl = document.createElement("b");
+      bEl.textContent = "/" + b.id + "/";
+      var span = document.createElement("span");
+      span.textContent = " " + b.name;
+      a.appendChild(bEl);
+      a.appendChild(span);
+      grid.appendChild(a);
+    });
+  }
+
+  /* autocompletar con Tab y navegacion por flechas */
+  function doAc() {
+    var q = input.value.toLowerCase().trim();
+    if (!q) { acList.innerHTML = ""; return; }
+    acList.innerHTML = "";
+    var found = items.filter(function (b) {
+      return ("/" + b.id + "/ " + b.name).toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 11);
+    found.forEach(function (b) {
+      var row = document.createElement("a");
+      row.textContent = "/" + b.id + "/ " + b.name;
+      row.addEventListener("click", function () {
+        goBoard(b.id);
+        input.value = "";
+        doAc();
+      });
+      acList.appendChild(row);
+    });
+    if (acList.firstChild) acList.firstChild.classList.add("rp-ac-sel");
+  }
+  function moveAc(delta) {
+    var rows = acList.querySelectorAll("a");
+    if (!rows.length) return;
+    var idx = 0, i;
+    for (i = 0; i < rows.length; i++) if (rows[i].classList.contains("rp-ac-sel")) idx = i;
+    rows[idx].classList.remove("rp-ac-sel");
+    idx = (idx + delta + rows.length) % rows.length;
+    rows[idx].classList.add("rp-ac-sel");
+    rows[idx].scrollIntoView({ block: "nearest" });
+  }
+  function acceptAc() {
+    var sel = acList.querySelector(".rp-ac-sel");
+    if (!sel) return false;
+    input.value = sel.textContent;
+    acList.innerHTML = "";
+    return true;
+  }
+  function goBoard(id) {
+    var el = document.createElement("a");
+    el.dataset.board = id;
+    document.body.appendChild(el);
+    el.click();
+    el.remove();
+  }
+  input.addEventListener("input", function () { renderGrid(input.value); doAc(); });
+  input.addEventListener("keydown", function (ev) {
+    if (ev.key === "Tab") {
+      if (acceptAc()) { ev.preventDefault(); renderGrid(""); }
+    } else if (ev.key === "ArrowDown") { ev.preventDefault(); moveAc(1); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); moveAc(-1); }
+    else if (ev.key === "Enter") {
+      var sel = acList.querySelector(".rp-ac-sel");
+      if (sel) { acceptAc(); renderGrid(""); }
+    }
+  });
+  input.addEventListener("blur", function () {
+    setTimeout(function () { acList.innerHTML = ""; }, 150);
+  });
+
+  renderGrid("");
+  body.appendChild(grid);
+  lay.appendChild(body);
+  return lay;
+}
+
 export function renderRightPanel() {
   var rp = document.createElement("aside");
   rp.className = "rightpanel";
@@ -93,50 +212,34 @@ export function renderRightPanel() {
     return { lay: lay, body: body };
   }
 
-  /* ---- 1) foros rapidos (abreviados tipo 4chan) ---- */
-  var layForos = mkLayout("Foros", true);
-  var forosBody = layForos.body;
-  var rap = document.createElement("div");
-  rap.className = "rp-quickforos";
-  BOARDS.forEach(function (b) {
-    var a = document.createElement("a");
-    a.dataset.board = b.id;
-    a.title = b.name;
-    a.textContent = b.id + "/";
-    rap.appendChild(a);
-  });
-  forosBody.appendChild(rap);
+  /* ---- 1) foros (nombres completos, 4 col, no retractil, scroll) ---- */
+  var forosItems = BOARDS.map(function (b) { return { id: b.id, name: b.name }; });
+  var layForos = buildForosLayout("Foros", forosItems, 0);
 
-  /* ---- 2) foros recomendados (UI demo de creadores) ---- */
-  var layRec = mkLayout("Foros Recomendados", false);
-  var recBody = layRec.body;
-  var recIntro = document.createElement("p");
-  recIntro.className = "rp-text";
-  recIntro.textContent = "Foros creados por la comunidad:";
-  recBody.appendChild(recIntro);
-  var recList = document.createElement("ul");
-  recList.className = "rp-reclist";
-  [
-    "or/ - Origen y Misterio",
-    "gz/ - Gamer Zone",
-    "ch/ - Cocina en Casa",
-    "mo/ - Moda Urbana",
-    "ca/ - Cafe y Radar"
-  ].forEach(function (name) {
-    var li = document.createElement("li");
-    var a = document.createElement("a");
-    a.href = "#";
-    a.textContent = name;
-    li.appendChild(a);
-    recList.appendChild(li);
-  });
-  recBody.appendChild(recList);
-  var recNote = document.createElement("p");
-  recNote.className = "rp-text";
-  recNote.textContent = "(Los creadores publicaran aqui su foro.)";
-  recBody.appendChild(recNote);
+  /* ---- 2) foros recomendados (4 col, no retractil, limite 4 filas, scroll) ---- */
+  var recItems = [
+    { id: "or", name: "Origen y Misterio" },
+    { id: "gz", name: "Gamer Zone" },
+    { id: "ch", name: "Cocina en Casa" },
+    { id: "mo", name: "Moda Urbana" },
+    { id: "ca", name: "Cafe y Radar" },
+    { id: "mu", name: "Musica Independiente" },
+    { id: "de", name: "Diseño y Pixel" },
+    { id: "pa", name: "Paranormal" },
+    { id: "ci", name: "Ciencia y Futuro" },
+    { id: "an2", name: "Anime Retro" },
+    { id: "fo", name: "Fotografia" },
+    { id: "de2", name: "Deep Web y Ciber" },
+    { id: "re", name: "Relatos y Cuentos" },
+    { id: "mi", name: "Minerales y Rocas" },
+    { id: "ga", name: "Gatitos" },
+    { id: "ho", name: "Hogar y DIY" },
+    { id: "es", name: "Espiritualidad" },
+    { id: "na", name: "Naturaleza" }
+  ];
+  var layRec = buildForosLayout("Foros Recomendados", recItems, 4);
 
-  /* ---- 3) secciones (Redes, Donar, Colaborar) ---- */
+  /* ---- 3) secciones retractiles (Redes, Donar, Colaborar) ---- */
   var layRedes = mkLayout("Redes", false);
   var pRedes = layRedes.body;
   var t1 = document.createElement("p");
@@ -192,8 +295,8 @@ export function renderRightPanel() {
   contact.textContent = "Mas informacion y contacto";
   pCol.appendChild(contact);
 
-  rp.appendChild(layForos.lay);
-  rp.appendChild(layRec.lay);
+  rp.appendChild(layForos);
+  rp.appendChild(layRec);
   rp.appendChild(layRedes.lay);
   rp.appendChild(layDonar.lay);
   rp.appendChild(layCol.lay);

@@ -677,6 +677,68 @@ textarea::placeholder {
   padding: 2px 2px 10px;
 }
 .rp-sec-body.open { display: block; }
+/* ---- layouts fijos de foros (no retractiles) ---- */
+.rp-section.rp-fixed { border-bottom: 1px solid var(--border); }
+.rp-section.rp-fixed + .rp-section { border-top: 1px solid var(--border); }
+.rp-head {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--text);
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.rp-fixed-body { padding: 4px 2px 10px; }
+.rp-srch { position: relative; margin-bottom: 6px; }
+.rp-srch input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px 4px;
+  padding: 2px 0;
+}
+.rp-grid-limit { max-height: 260px; overflow-y: auto; }
+.rp-grid a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 2px;
+}
+.rp-grid a:hover { text-decoration: underline; background: var(--bg); }
+.rp-grid a b { font-family: "Courier New", monospace; }
+.rp-apos { font-size: 12px; color: var(--muted); margin: 4px 0 6px; }
+.rp-ac {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  display: none;
+}
+.rp-ac:not(:empty) { display: block; }
+.rp-ac a {
+  display: block;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.rp-ac a.rp-ac-sel,
+.rp-ac a:hover { background: var(--accent); color: #16161e; }
 .rp-quickforos {
   display: flex;
   flex-wrap: wrap;
