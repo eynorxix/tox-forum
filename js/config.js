@@ -8,15 +8,31 @@ export var STORAGE_KEY = "forchan_data_v1";
 export var ADMIN_NPUB = "";
 export var BANNED_NPUBS = [];
 
+export var CATEGORIES = [
+  "General",
+  "Tecnologia",
+  "Creativo",
+  "Entretenimiento",
+  "Otros"
+];
+
 export var BOARDS = [
-  { id: "g",  name: "General",      desc: "Charlas de todo tipo." },
-  { id: "t",  name: "Tecnologia",   desc: "Gadgets, noticias y hardware." },
-  { id: "p",  name: "Programacion", desc: "Codigo, bugs y tutoriales." },
-  { id: "a",  name: "Arte",         desc: "Dibujo, musica y creatividad." },
-  { id: "m",  name: "Musica",       desc: "Comparte lo que escuchas." },
-  { id: "d",  name: "Domsday",      desc: "El mundo: publica y ubicate en el mapa." },
-  { id: "r",  name: "Random",       desc: "Sin reglas (casi)." },
-  { id: "j",  name: "Juegos",       desc: "Videojuegos y mesa." }
+  { id: "g",  name: "General",      desc: "Charlas de todo tipo.",          cat: "General" },
+  { id: "r",  name: "Random",       desc: "Sin reglas (casi).",             cat: "General" },
+  { id: "t",  name: "Tecnologia",   desc: "Gadgets, noticias y hardware.",  cat: "Tecnologia" },
+  { id: "p",  name: "Programacion", desc: "Codigo, bugs y tutoriales.",     cat: "Tecnologia" },
+  { id: "h",  name: "Hardware",     desc: "Componentes, consolas y DIY.",   cat: "Tecnologia" },
+  { id: "so", name: "Software",     desc: "Apps, sistemas y utilidades.",   cat: "Tecnologia" },
+  { id: "a",  name: "Arte",         desc: "Dibujo, musica y creatividad.",  cat: "Creativo" },
+  { id: "m",  name: "Musica",       desc: "Comparte lo que escuchas.",      cat: "Creativo" },
+  { id: "d",  name: "Domsday",      desc: "El mundo: publica y ubicate.",   cat: "Creativo" },
+  { id: "j",  name: "Juegos",       desc: "Videojuegos y mesa.",            cat: "Entretenimiento" },
+  { id: "an", name: "Anime",        desc: "Series, peliculas y videos.",    cat: "Entretenimiento" },
+  { id: "ml", name: "Manga",        desc: "Manga, comics y novelas ligeras.", cat: "Entretenimiento" },
+  { id: "tv", name: "TV y Cine",    desc: "Series, peliculas y videos.",    cat: "Entretenimiento" },
+  { id: "q",  name: "Preguntas",    desc: "Dudas, consejos y FAQ.",         cat: "Otros" },
+  { id: "s",  name: "Social",       desc: "Presentaciones y comunidad.",    cat: "Otros" },
+  { id: "c",  name: "Charla",       desc: "Temas libres y opiniones.",      cat: "Otros" }
 ];
 
 export var BLOG_ASSETS = "blog/assets/";

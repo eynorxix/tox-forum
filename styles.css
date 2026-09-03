@@ -173,6 +173,42 @@ a:visited { color: var(--link-visited); }
 .home-intro h2 { font-size: 29px; margin-bottom: 4px; }
 .home-intro p { color: var(--muted); font-size: 16px; }
 
+/* ---- indice estilo 4chan ---- */
+.chan-home { max-width: 1000px; margin: 0 auto; }
+.chan-logo {
+  font-family: "Courier New", monospace;
+  font-size: 56px;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  line-height: 1.1;
+}
+.chan-cat { margin-bottom: 18px; }
+.chan-cat-title {
+  font-family: "Courier New", monospace;
+  font-size: 18px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+.cat-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px 0;
+  margin: 0;
+  padding: 0;
+}
+.cat-item { padding: 2px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-item a { color: var(--accent); text-decoration: none; font-size: 14px; }
+.cat-item a:hover { text-decoration: underline; }
+.cat-item a b { font-family: "Courier New", monospace; color: var(--accent); }
+.cat-item a small { color: var(--muted); }
+
 .board-list {
   list-style: none;
   border: 1px solid var(--border);

@@ -1,22 +1,21 @@
-/* ===== vista inicial (home) ===== */
-import { BOARDS } from "../config.js";
+/* ===== vista inicial (home) estilo 4chan =====
+   Logo "ForosRaiz" grande arriba, categorias apiladas verticalmente y, dentro
+   de cada categoria, los boards repartidos en 4 columnas fijas (filas
+   ilimitadas). Cada celda muestra solo "/tag/ - Nombre" sin descripcion. */
+import { BOARDS, CATEGORIES } from "../config.js";
 import { state, getBoard } from "../store/db.js";
 import { openProfile } from "./appshell.js";
 import { isBanned } from "../store/moderation.js";
 
 export function renderHome() {
   var wrap = document.createElement("div");
-  wrap.className = "home";
+  wrap.className = "home chan-home";
 
-  var intro = document.createElement("div");
-  intro.className = "home-intro";
-  var h = document.createElement("h2");
-  h.textContent = "Bienvenido a ForosRaiz";
-  var p = document.createElement("p");
-  p.textContent = "Un imageboard minimalista. Los usuarios anónimos solo pueden ver y responder lo justo; para publicar texto e imagen debes registrarte.";
-  intro.appendChild(h);
-  intro.appendChild(p);
-  wrap.appendChild(intro);
+  /* logo grande tipo 4chan */
+  var logo = document.createElement("div");
+  logo.className = "chan-logo";
+  logo.textContent = "ForosRaiz";
+  wrap.appendChild(logo);
 
   /* buscador tipo navegador: foros o usuarios */
   var searchWrap = document.createElement("div");
@@ -43,9 +42,8 @@ export function renderHome() {
       var u = state.users[pubHex];
       if (!u) return;
       if (isBanned(u.pubHex)) return;
-      var qq = q;
       var hay = ((u.name || "") + " " + (u.npub || "")).toLowerCase();
-      if (hay.indexOf(qq) >= 0) {
+      if (hay.indexOf(q) >= 0) {
         var row = document.createElement("div");
         row.className = "sr-user";
         var nm = document.createElement("span");
@@ -78,28 +76,32 @@ export function renderHome() {
     });
   }
 
-  var stats = document.createElement("div");
-  stats.className = "notice";
-  stats.textContent =
-    "Ahora mismo hay " + state.counter + " hilos y posts publicados en total.";
-  wrap.appendChild(stats);
+  /* indice de foros por categoria */
+  CATEGORIES.forEach(function (cat) {
+    var section = document.createElement("section");
+    section.className = "chan-cat";
+    var title = document.createElement("h3");
+    title.className = "chan-cat-title";
+    title.textContent = cat;
+    section.appendChild(title);
 
-  var list = document.createElement("ol");
-  list.className = "board-list";
-  BOARDS.forEach(function (b) {
-    var li = document.createElement("li");
-    var a = document.createElement("a");
-    a.dataset.board = b.id;
-    var nThreads = getBoard(b.id).length;
-    var bEl = document.createElement("b");
-    bEl.textContent = "/" + b.id + "/ - " + b.name;
-    var small = document.createElement("small");
-    small.innerHTML = " &mdash; " + b.desc + " (" + nThreads + " hilos)";
-    a.appendChild(bEl);
-    a.appendChild(small);
-    li.appendChild(a);
-    list.appendChild(li);
+    var grid = document.createElement("ul");
+    grid.className = "cat-grid";
+    (BOARDS.filter(function (b) { return b.cat === cat; })).forEach(function (b) {
+      var li = document.createElement("li");
+      li.className = "cat-item";
+      var nThreads = getBoard(b.id).length;
+      var a = document.createElement("a");
+      a.dataset.board = b.id;
+      a.title = b.desc;
+      a.innerHTML = "<b>/" + b.id + "/</b> - " + b.name +
+        (nThreads ? " <small>(" + nThreads + ")</small>" : "");
+      li.appendChild(a);
+      grid.appendChild(li);
+    });
+    section.appendChild(grid);
+    wrap.appendChild(section);
   });
-  wrap.appendChild(list);
+
   return wrap;
 }
