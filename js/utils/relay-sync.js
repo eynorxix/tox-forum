@@ -7,7 +7,7 @@
    - syncMyPosts()     : restaura los posts del usuario logueado (otro dispositivo).
    - Los anonimos NO publican a relays: su ambito sigue siendo solo local. */
 import { state, save, getBoard, getMe } from "../store/db.js";
-import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts } from "./relays.js";
+import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts, publishBoardSnapshot } from "./relays.js";
 import { isBanned } from "../store/moderation.js";
 import { voteHashtags } from "../domain/voting.js";
 import { BOARDS } from "../config.js";
@@ -101,6 +101,28 @@ function mergeBoard(boardId, posts) {
   }
   console.log("[sync] mergeBoard(" + boardId + ") inserto cambios? " + changed + " (recibio " + posts.length + " posts)");
   return changed;
+}
+
+/* re-publica en relays el snapshot de TODOS los posts del usuario actual en un
+   board (modelo blog). Se llama despues de publicar un hilo o una respuesta,
+   para que el evento addressable del usuario en ese board quede actualizado.
+   Devuelve Promise<number> = relays que confirmaron. */
+export function publishUserBoard(boardId) {
+  var me = getMe();
+  if (!me || !me.pubHex) return Promise.resolve(0);
+  var posts = [];
+  var coll = getBoard(boardId) || [];
+  coll.forEach(function (th) {
+    if (th.ownerType === "user" && th.ownerPub === me.pubHex) {
+      posts.push({ no: th.no, rt: null, content: th.comment || "", image: th.image || null, ts: th.ts || Date.now() });
+      (th.replies || []).forEach(function (r) {
+        if (r.ownerType === "user" && r.ownerPub === me.pubHex) {
+          posts.push({ no: r.no, rt: th.no, content: r.comment || "", image: r.image || null, ts: r.ts || Date.now() });
+        }
+      });
+    }
+  });
+  return publishBoardSnapshot({ board: boardId, posts: posts });
 }
 
 function resolveNames(pubkeys, coll) {
@@ -205,10 +227,12 @@ export function watchBoard(boardId, onIncoming) {
   liveCbs[boardId] = onIncoming || null;
   if (liveSubs[boardId] || livePending[boardId]) return;
   livePending[boardId] = true;
-  subscribeBoardPosts(boardId, function (post) {
-    var changed = mergeBoard(boardId, [post]);
-    if (!changed && post.threadNo != null &&
-        !getBoard(boardId).some(function (th) { return th.no === post.threadNo; })) {
+  subscribeBoardPosts(boardId, function (posts) {
+    var changed = mergeBoard(boardId, posts);
+    if (!changed && posts.some(function (post) {
+      return post.threadNo != null &&
+        !getBoard(boardId).some(function (th) { return th.no === post.threadNo; });
+    })) {
       /* llego una respuesta antes que su hilo: traemos el foro completo,
          el hilo llegara en la proxima sincronizacion */
       syncBoard(boardId, function () {

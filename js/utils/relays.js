@@ -1,15 +1,20 @@
-/* ===== relays Nostr: publicacion y consulta de posts de ForosRaiz =====
-   Basado en el stack del repo local /home/eynor/Documents/proyectsTT/blog:
-   nostr-tools SimplePool + finalizeEvent (portado).
+/* ===== relays Nostr: persistencia de posts de ForosRaiz (modelo tipo blog) =====
+   Patron, portado de /home/eynor/Documents/proyectsTT/blog:
 
-   Cambios respecto a la version anterior:
-   - La publicacion confirma cada relay por separado (un relay caido ya no
-     tumba la publicacion completa), con timeout, como hace el blog.
-   - Los posts se pueden LEER de vuelta de los relays (fetchBoardPosts /
-     fetchUserPosts / fetchNames), de modo que Nostr actua como capa de
-     persistencia de las publicaciones de usuarios registrados.
-   - Las respuestas llevan la etiqueta "rt" = numero local del hilo para
-     poder reconstruirlas en esta y otras instancias. */
+   En vez de publicar un evento por post (que fallaba porque los relays rechazan
+   el filtro "#board" con "unindexed tag filter"), CADA USUARIO publica TDOOS sus
+   posts de UN foro en UN solo evento addressable (kind 33033) con d-tag FIJO:
+
+       d-tag = forosraiz-post-v1:<board>
+
+   Como es addressable y el d-tag es fijo por (autor, board), el relay guarda el
+   snapshot MAS RECIENTE de cada autor en cada board (igual que el blog guarda
+   todo su estado en "bento-blog-v1"). Asi se lee con "#d" (indexado por todos
+   los relays) y no hace falta un tag personalizado.
+
+   Lectura de un board  -> { kinds:[POST_KIND], '#d':[POST_DTAG+':'+board] }
+   En vivo              -> suscripcion al mismo filtro, se funde cada snapshot.
+   La UI (boards 4chan) NO cambia; solo cambia como se guarda/lee el historial. */
 import { loadNostrLib } from "./nostr-lib.js";
 import { getActiveSec } from "./nostr.js";
 
@@ -56,14 +61,16 @@ function doPublish(draft) {
     });
     return Promise.all(promises).then(function (oks) {
       var confirmed = oks.filter(Boolean).length;
-      console.log("[relays] publicado kind " + draft.kind + " confirmado en " + confirmed + "/" + RELAYS.length + " relays");
+      var dTag = "";
+      (draft.tags || []).forEach(function (t) { if (t[0] === "d") dTag = t[1]; });
+      console.log("[relays] publicado snapshot " + draft.kind + " d=" + dTag + " confirmado en " + confirmed + "/" + RELAYS.length + " relays");
       return confirmed;
     });
   }).catch(function () { return 0; });
 }
 
 /* publica con un reintento: si ningun relay confirmo, espera 4s y lo intenta
-   una vez mas. Asi un relay caido en ese momento no pierde el post. */
+   una vez mas. Asi un relay caido en ese momento no pierde el snapshot. */
 function pubWithRetry(draft) {
   var attempt = 0;
   var tx = function () {
@@ -80,42 +87,22 @@ function pubWithRetry(draft) {
   return tx();
 }
 
-/* sal por instalacion: hace el d-tag unico por navegador aunque el contador
-   de 'no' coincida en dos dispositivos de la misma cuenta. Sin esto, los
-   relays (kind 33033 = addressable) REMPLAZAN el post publicado desde el
-   otro navegador y los posts se "eliminan" solos. */
-var PUB_SALT = null;
-function pubSalt() {
-  if (PUB_SALT) return PUB_SALT;
-  try {
-    PUB_SALT = localStorage.getItem("forosraiz_pub_salt");
-    if (!PUB_SALT) {
-      PUB_SALT = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem("forosraiz_pub_salt", PUB_SALT);
-    }
-  } catch (e) {
-    PUB_SALT = Math.random().toString(36).slice(2);
-  }
-  return PUB_SALT;
-}
-
-/* publica un post de ForosRaiz a los relays.
-   input: { board, no, content, image, replyTo } (replyTo opcional: no del hilo)
-   Devuelve Promise<number> = relays que confirmaron (0 = ninguno). */
-export function publishPost(input) {
+/* publica el snapshot completo de un usuario en un board (modelo blog).
+   snap = { board, posts:[{no, rt, content, image, ts}] } (todos los posts del
+   usuario en ese board, hilos y respuestas). d-tag FIJO por (autor, board).
+   Devuelve Promise<number> = relays que confirmaron. */
+export function publishBoardSnapshot(snap) {
   var now = Math.floor(Date.now() / 1000);
   var tags = [
-    ["d", POST_DTAG + ":" + input.board + ":" + input.no + ":" + pubSalt()],
+    ["d", POST_DTAG + ":" + snap.board],
     ["t", "forosraiz"],
-    ["t", input.board],
-    ["board", input.board]
+    ["t", snap.board],
+    ["board", snap.board]
   ];
-  if (input.replyTo) tags.push(["rt", String(input.replyTo)]);
-  if (input.image) tags.push(["imeta", "url " + input.image]);
-  var content = input.content || "";
-  if (input.image && content.indexOf(input.image) < 0) {
-    content = content + "\n" + input.image;
-  }
+  var content = JSON.stringify({
+    posts: snap.posts || [],
+    updated_at: now
+  });
   return pubWithRetry({ kind: POST_KIND, created_at: now, tags: tags, content: content });
 }
 
@@ -157,54 +144,50 @@ export function queryEvents(filter, opts) {
   });
 }
 
-/* valida un evento POST_KIND y lo deja en forma util para el tablero. */
-function parsePostEvent(lib, ev) {
+/* extrae los posts del snapshot addressable de un usuario en un board.
+   Cada snapshot (content JSON con "posts") expone los posts de ESE autor.
+   Devuelve array de {pubkey, no, threadNo, content, image, created_at}. */
+function parseSnapshot(lib, ev) {
   try {
-    if (!lib.verifyEvent(ev)) return null;
-  } catch (e) { return null; }
+    if (!lib.verifyEvent(ev)) return [];
+  } catch (e) { return []; }
   var dTag = ev.tags.find(function (t) { return t[0] === "d"; });
   var board = "g";
-  var no = 0;
   if (dTag) {
     var parts = (dTag[1] || "").split(":");
-    if (parts.length >= 3 && parts[0] === POST_DTAG) {
-      board = parts[1];
-      no = parseInt(parts[2], 10);
-    }
+    if (parts.length >= 2 && parts[0] === POST_DTAG) board = parts[1];
   }
-  if (!no) return null;
-  var bTag = ev.tags.find(function (t) { return t[0] === "board"; });
-  if (bTag && bTag[1]) board = bTag[1];
-  var threadNo = null;
-  var rt = ev.tags.find(function (t) { return t[0] === "rt"; });
-  if (rt && rt[1]) threadNo = parseInt(rt[1], 10) || null;
-  var image = null;
-  var im = ev.tags.find(function (t) { return t[0] === "imeta"; });
-  if (im) {
-    var m = /url (\S+)/.exec(im[1] || "");
-    if (m) image = m[1];
-  }
-  var content = ev.content || "";
-  if (image && content.indexOf(image) >= 0) {
-    content = content.split("\n").filter(function (l) { return l.trim() !== image; }).join("\n").trim();
-  }
-  return {
-    id: ev.id,
-    pubkey: ev.pubkey,
-    board: board,
-    no: no,
-    threadNo: threadNo,
-    content: content,
-    image: image,
-    created_at: ev.created_at
-  };
+ var data = null;
+  try {
+    data = (typeof ev.content === "string") ? JSON.parse(ev.content) : null;
+  } catch (e) { return []; }
+  var rawPosts = (data && Array.isArray(data.posts)) ? data.posts : [];
+  var out = [];
+  rawPosts.forEach(function (p) {
+    if (!p || !p.no) return;
+    out.push({
+      pubkey: ev.pubkey,
+      board: board,
+      no: p.no,
+      threadNo: (p.rt != null) ? p.rt : null,
+      content: p.content || "",
+      image: p.image || null,
+      created_at: p.ts ? Math.floor(p.ts / 1000) : ev.created_at
+    });
+  });
+  return out;
 }
 
-/* consulta puntual de historial por suscripcion acumulativa: abre la misma
-   suscripcion que el en vivo (que sabemos SI trae los posts, `querySync` da 0
-   al cerrarse prematuro), deja que los relays envien la salida inicial durante
-   unos segundos y luego cierra. Asi un visitante nuevo con relays frios SI ve
-   el historial. Devuelve Promise<Event[]> sin duplicados. */
+/* snapshots addressable de un board (los mas recientes de cada autor).
+   Devuelve array de {pubkey, boardD, created_at, posts:[...]}. */
+function fetchBoardSnapshots(boardId, limit) {
+  var filter = { kinds: [POST_KIND], "#d": [POST_DTAG + ":" + boardId], limit: limit || 400 };
+  return queryBySubscription(filter, 10000);
+}
+
+/* consulta puntual por suscripcion acumulativa: abre la misma suscripcion que
+   el en vivo, deja que los relays envien la salida inicial durante unos
+   segundos y luego cierra. Devuelve Promise<Event[]> sin duplicados. */
 function queryBySubscription(filter, wait) {
   return getPool().then(function (p) {
     return new Promise(function (resolve) {
@@ -236,55 +219,67 @@ function queryBySubscription(filter, wait) {
   }).catch(function () { return []; });
 }
 
-/* posts (hilos y respuestas) de un foro, ordenados por fecha.
-   NOTA: se consulta con #t (hash tag) y no con #board, porque los relays solo
-   indexan tags estandar como "t"; un tag personalizado "board" provoca el error
-   "unindexed tag filter" de primal.net y 0 resultados. En publicacion los posts
-   ya llevan ["t", board] para que esto funcione. */
+/* posts (hilos y respuestas) de un foro, ordenados por fecha. Lee los snapshots
+   addressable por "#d" (indexado por todos los relays) y expande los posts de
+   cada autor. NOTA: si dos snapshots del mismo autor llegan en un limit, se
+   toma el mas reciente por autor para no duplicar. */
 export function fetchBoardPosts(boardId, limit) {
-  return queryBySubscription({ kinds: [POST_KIND], "#t": [boardId], limit: limit || 200 }, 10000)
-    .then(function (events) {
-      return getPool().then(function (p) {
-        var out = [];
-        events.forEach(function (ev) {
-          var post = parsePostEvent(p.lib, ev);
-          if (post && post.board === boardId) out.push(post);
-        });
-        out.sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
-        console.log("[relays] fetchBoardPosts(" + boardId + ") -> " + out.length + " posts de " + events.length + " eventos");
-        return out;
+  return fetchBoardSnapshots(boardId, limit).then(function (events) {
+    return getPool().then(function (p) {
+      var newestByAuthor = {};
+      events.forEach(function (ev) {
+        var prev = newestByAuthor[ev.pubkey];
+        if (prev && ev.created_at < prev.created_at) return;
+        newestByAuthor[ev.pubkey] = ev;
       });
-    })
-    .catch(function () { console.warn("[relays] error fetchBoardPosts(" + boardId + ")", arguments); return []; });
+      var out = [];
+      Object.keys(newestByAuthor).forEach(function (pub) {
+        parseSnapshot(p.lib, newestByAuthor[pub]).forEach(function (post) {
+          if (post.board === boardId) out.push(post);
+        });
+      });
+      out.sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
+      console.log("[relays] fetchBoardPosts(" + boardId + ") -> " + out.length + " posts de " + events.length + " snapshots (" + Object.keys(newestByAuthor).length + " autores)");
+      return out;
+    });
+  })
+  .catch(function () { console.warn("[relays] error fetchBoardPosts(" + boardId + ")", arguments); return []; });
 }
 
-/* todos los posts de un usuario (pubHex) en todos los foros. */
+/* todos los posts de un usuario (pubHex) en todos los foros: lee todos sus
+   snapshots (todos los d-tags de ese autor) y expande los posts. */
 export function fetchUserPosts(pubkeyHex, limit) {
-  return queryBySubscription({ kinds: [POST_KIND], authors: [pubkeyHex], limit: limit || 200 }, 10000)
-    .then(function (events) {
-      return getPool().then(function (p) {
-        var out = [];
+  return getPool().then(function (p) {
+    return queryBySubscription({ kinds: [POST_KIND], authors: [pubkeyHex], limit: limit || 400 }, 10000)
+      .then(function (events) {
+        var newestByBoard = {};
         events.forEach(function (ev) {
-          var post = parsePostEvent(p.lib, ev);
-          if (post) out.push(post);
+          var dTag = ev.tags.find(function (t) { return t[0] === "d"; });
+          var key = dTag ? dTag[1] : ("?:" + ev.created_at);
+          var prev = newestByBoard[key];
+          if (prev && ev.created_at < prev.created_at) return;
+          newestByBoard[key] = ev;
+        });
+        var out = [];
+        Object.keys(newestByBoard).forEach(function (key) {
+          parseSnapshot(p.lib, newestByBoard[key]).forEach(function (post) { out.push(post); });
         });
         out.sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
         return out;
       });
-    })
-    .catch(function () { return []; });
+  }).catch(function () { return []; });
 }
 
-/* suscripcion en vivo a un foro: trae los posts que ya estan en los relays
-   (salida inicial) y los que otros usuarios publiquen en tiempo real.
-   Devuelve Promise<closer> (con .close()). Mismo patron que subscribeBlogState
-   del blog: con esto los foros conectan a mucha gente a traves de los relays. */
-export function subscribeBoardPosts(boardId, onEvent) {
+/* suscripcion en vivo a un foro: trae los snapshots (salida inicial) y los que
+   publiquen otros usuarios en tiempo real. Es el MISMO filtro #d que la carga.
+   onPosts(array) se llama con los posts expandidos de cada snapshot recibido.
+   Devuelve Promise<closer> (con .close()). */
+export function subscribeBoardPosts(boardId, onPosts) {
   return getPool().then(function (p) {
     var seen = {};
     return p.pool.subscribeMany(
       RELAYS,
-      [{ kinds: [POST_KIND], "#t": [boardId] }],
+      [{ kinds: [POST_KIND], "#d": [POST_DTAG + ":" + boardId] }],
       {
         onevent: function (ev) {
           try {
@@ -292,8 +287,8 @@ export function subscribeBoardPosts(boardId, onEvent) {
           } catch (e) { return; }
           if (seen[ev.id]) return;
           seen[ev.id] = true;
-          var post = parsePostEvent(p.lib, ev);
-          if (post && post.board === boardId) onEvent(post);
+          var posts = parseSnapshot(p.lib, ev).filter(function (post) { return post.board === boardId; });
+          if (posts.length) onPosts(posts);
         },
         maxWait: 9000
       }

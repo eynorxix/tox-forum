@@ -6,7 +6,8 @@ import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
-import { publishPost, RELAYS } from "../utils/relays.js";
+import { RELAYS } from "../utils/relays.js";
+import { publishUserBoard } from "../utils/relay-sync.js";
 import { toast } from "../utils/dom.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
@@ -145,7 +146,7 @@ function makePostForm(boardId) {
       };
       getBoard(boardId).push(thread);
       save();
-      publishPost({ board: boardId, no: thread.no, content: comment, image: thread.image }).then(reportPublish);
+      publishUserBoard(boardId).then(reportPublish);
       refresh();
     };
 
@@ -321,7 +322,7 @@ function makeReplyForm(boardId, thread) {
       };
       thread.replies.push(reply);
       save();
-      publishPost({ board: boardId, no: reply.no, content: comment, image: reply.image, replyTo: thread.no }).then(reportPublish);
+      publishUserBoard(boardId).then(reportPublish);
       refresh();
     };
     if (file) {
