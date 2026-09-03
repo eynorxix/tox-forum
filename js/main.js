@@ -13,8 +13,8 @@ import { closeSettings, isSettingsOpen } from "./ui/settings.js";
 import { acHide, isAcOpen } from "./utils/autocomplete.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
 import {
-  toggleNotifications, closeNotifications, isNotifOpen, refreshNotifBadge,
-  openSaved, closeSaved, isSavedOpen, syncFollowedNotifications
+  closeNotifications, isNotifOpen, refreshNotifBadge,
+  closeSaved, isSavedOpen, syncFollowedNotifications
 } from "./ui/activity.js";
 
 /* el controlador de presentacion inyecta sus acciones a los componentes */
@@ -67,19 +67,6 @@ if (mpBtn) {
       showMyProfile();
     }
   });
-}
-
-var notifBtn = document.getElementById("notif-btn");
-if (notifBtn) {
-  notifBtn.addEventListener("click", function () { toggleNotifications(); });
-}
-var inicioBtn = document.getElementById("inicio-seguidos-btn");
-if (inicioBtn) {
-  inicioBtn.addEventListener("click", function () { go("seguidos"); });
-}
-var savedBtn = document.getElementById("saved-btn");
-if (savedBtn) {
-  savedBtn.addEventListener("click", function () { openSaved(); });
 }
 
 /* cierra la ventana de notificaciones al hacer click fuera de ella */
