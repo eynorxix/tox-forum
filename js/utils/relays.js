@@ -236,9 +236,13 @@ function queryBySubscription(filter, wait) {
   }).catch(function () { return []; });
 }
 
-/* posts (hilos y respuestas) de un foro, ordenados por fecha. */
+/* posts (hilos y respuestas) de un foro, ordenados por fecha.
+   NOTA: se consulta con #t (hash tag) y no con #board, porque los relays solo
+   indexan tags estandar como "t"; un tag personalizado "board" provoca el error
+   "unindexed tag filter" de primal.net y 0 resultados. En publicacion los posts
+   ya llevan ["t", board] para que esto funcione. */
 export function fetchBoardPosts(boardId, limit) {
-  return queryBySubscription({ kinds: [POST_KIND], "#board": [boardId], limit: limit || 200 }, 10000)
+  return queryBySubscription({ kinds: [POST_KIND], "#t": [boardId], limit: limit || 200 }, 10000)
     .then(function (events) {
       return getPool().then(function (p) {
         var out = [];
@@ -280,7 +284,7 @@ export function subscribeBoardPosts(boardId, onEvent) {
     var seen = {};
     return p.pool.subscribeMany(
       RELAYS,
-      [{ kinds: [POST_KIND], "#board": [boardId] }],
+      [{ kinds: [POST_KIND], "#t": [boardId] }],
       {
         onevent: function (ev) {
           try {
