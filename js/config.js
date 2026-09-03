@@ -13,7 +13,8 @@ export var CATEGORIES = [
   "Tecnologia",
   "Creativo",
   "Entretenimiento",
-  "Otros"
+  "Otros",
+  "Adult"
 ];
 
 export var BOARDS = [
@@ -32,7 +33,11 @@ export var BOARDS = [
   { id: "tv", name: "TV y Cine",    desc: "Series, peliculas y videos.",    cat: "Entretenimiento" },
   { id: "q",  name: "Preguntas",    desc: "Dudas, consejos y FAQ.",         cat: "Otros" },
   { id: "s",  name: "Social",       desc: "Presentaciones y comunidad.",    cat: "Otros" },
-  { id: "c",  name: "Charla",       desc: "Temas libres y opiniones.",      cat: "Otros" }
+  { id: "c",  name: "Charla",       desc: "Temas libres y opiniones.",      cat: "Otros" },
+  { id: "b",  name: "Adulto",       desc: "NSFW: contenido adulto explicito.", cat: "Adult" },
+  { id: "ec", name: "Ecchi",        desc: "NSFW: arte sugerente y softcore.", cat: "Adult" },
+  { id: "yn", name: "Yuri",         desc: "NSFW: relaciones y arte femenino.", cat: "Adult" },
+  { id: "fet", name: "Fetiches",    desc: "NSFW: fetiches y practicas.",     cat: "Adult" }
 ];
 
 export var BLOG_ASSETS = "blog/assets/";
