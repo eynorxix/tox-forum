@@ -69,6 +69,42 @@ if (mpBtn) {
   });
 }
 
+/* movil: boton "Foros" de la barra superior abre/cierra el drawer del panel
+   derecho (foros, recomendados y secciones). Se rellena en render(). */
+var mobileForosBtn = document.getElementById("mobile-foros-btn");
+var mobileRap = document.getElementById("mobile-rap");
+var mobileRapBackdrop = document.getElementById("mobile-rap-backdrop");
+function setMobileRap(open) {
+  if (!mobileRap || !mobileRapBackdrop) return;
+  if (open && mobileRap.style.display !== "block") {
+    render();
+    refreshNotifBadge();
+    mobileRap.style.display = "block";
+    mobileRapBackdrop.style.display = "block";
+    mobileRapBackdrop.classList.add("show");
+    mobileRap.classList.add("open");
+  } else if (!open && mobileRap.style.display !== "none") {
+    mobileRap.style.display = "none";
+    mobileRapBackdrop.style.display = "none";
+    mobileRapBackdrop.classList.remove("show");
+    mobileRap.classList.remove("open");
+  }
+}
+if (mobileForosBtn) {
+  mobileForosBtn.addEventListener("click", function () {
+    setMobileRap(mobileRap.style.display === "none");
+  });
+}
+if (mobileRapBackdrop) {
+  mobileRapBackdrop.addEventListener("click", function () { setMobileRap(false); });
+}
+if (mobileRap) {
+  mobileRap.addEventListener("click", function (ev) {
+    var el = ev.target.closest ? ev.target.closest("[data-board]") : null;
+    if (el) { setMobileRap(false); }
+  });
+}
+
 /* cierra la ventana de notificaciones al hacer click fuera de ella */
 document.addEventListener("click", function (ev) {
   if (!isNotifOpen()) return;

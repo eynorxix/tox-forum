@@ -17,6 +17,7 @@
   <header id="topbar">
     <div class="inner">
       <div id="top-actions">
+        <button id="mobile-foros-btn" type="button" class="mobile-foros-btn" title="Foros y secciones">Foros</button>
         <button id="my-profile-btn" type="button" class="my-profile-chip" title="Mi perfil">
           <span id="mp-avatar"></span>
           <span id="mp-label">Mi perfil</span>
@@ -28,6 +29,10 @@
 
   <!-- Contenido dinámico -->
   <main id="content"></main>
+
+  <!-- Drawer de foros/secciones (movil): se rellena con el panel derecho -->
+  <div id="mobile-rap" class="mobile-rap" style="display:none"></div>
+  <div id="mobile-rap-backdrop" class="mobile-rap-backdrop" style="display:none"></div>
 
   <footer id="footer">
     <p>ForosRaiz &mdash; imageboard minimalista &middot; los &uacute;nicos que pueden publicar son los usuarios registrados</p>

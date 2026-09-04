@@ -61,6 +61,15 @@ export function render() {
   cancelAnims();
   var main = document.getElementById("content");
   main.innerHTML = "";
+  var mrap = document.getElementById("mobile-rap");
+  /* en movil el panel derecho (foros/recomendados/secciones) vive en un drawer
+     accesible desde el boton "Foros" de la barra superior */
+  if (mrap && mrap.style.display !== "none") {
+    mrap.innerHTML = "";
+    var rpDrawer = renderRightPanel();
+    rpDrawer.className = rpDrawer.className.replace(/\brightpanel\b/, "rightpanel mobile-rp");
+    mrap.appendChild(rpDrawer);
+  }
   if (session.currentView === "home" && !session.profileView && !session.myProfileView) {
     main.classList.remove("wide");
     main.appendChild(renderHome());
