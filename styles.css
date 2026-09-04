@@ -7,25 +7,28 @@
 }
 
 :root {
-  /* Tokyo Night (Enkia) */
-  --bg: #1a1b26;            /* BG_MAIN */
-  --bg-alt: #24283b;        /* BG_STORM */
-  --bg-toolbar: #16161e;    /* BG_DARK */
-  --border: rgba(86, 95, 137, 0.4);  /* línea suave (FG_COMMENT) */
-  --text: #c0caf5;          /* FG_MAIN */
-  --text-side: #a9b1d6;     /* FG_SIDE */
-  --comment: #565f89;       /* FG_COMMENT */
-  --accent: #f7768e;        /* NEON_RED */
-  --orange: #ff9e64;
-  --yellow: #e0af68;
-  --green: #9ece6a;
-  --teal: #73daca;
-  --cyan: #7dcfff;
-  --blue: #7aa2f7;
-  --purple: #bb9af7;
+  /* Tokyo Night Day (tema claro) — ver assets/tokyo-night-light.md */
+  --bg: #e1e2e7;            /* BG principal */
+  --bg-alt: #d0d5e3;        /* BG surf/alt */
+  --bg-flo: #c1c9df;        /* BG flotante/sidebar */
+  --bg-toolbar: #c1c9df;    /* BG_DARK1 / toolbar */
+  --bg-inset: #c4c8da;      /* BG resaltado */
+  --border: #b4b5b9;        /* borde general */
+  --text: #3760bf;          /* texto principal */
+  --text-side: #4b5f99;     /* texto secundario legible */
+  --comment: #848cb5;       /* comentarios */
+  --accent: #2e7de9;        /* azul acento principal */
+  --orange: #b15c00;
+  --yellow: #8c6c3e;
+  --green: #587539;
+  --teal: #118c74;
+  --cyan: #007197;
+  --blue: #2e7de9;
+  --purple: #7847bd;
+  --red: #f52a65;
   --link: var(--blue);
   --link-visited: var(--purple);
-  --muted: var(--text-side);
+  --muted: var(--comment);
   --quote: var(--green);
 }
 
