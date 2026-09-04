@@ -257,9 +257,9 @@ a:visited { color: var(--link-visited); }
   padding: 0;
 }
 .cat-item { padding: 2px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cat-item a { color: var(--accent); text-decoration: none; font-size: 14px; }
+.cat-item a { color: var(--red); text-decoration: none; font-size: 14px; }
 .cat-item a:hover { text-decoration: underline; }
-.cat-item a b { font-family: "Courier New", monospace; color: var(--accent); }
+.cat-item a b { font-family: "Courier New", monospace; color: var(--red); }
 .cat-item a small { color: var(--muted); }
 
 .board-list {
@@ -279,7 +279,7 @@ a:visited { color: var(--link-visited); }
   background: var(--bg);
   text-decoration: none;
 }
-.board-list a b { color: var(--accent); font-family: "Courier New", monospace; }
+.board-list a b { color: var(--red); font-family: "Courier New", monospace; }
 .board-list a small { color: var(--muted); }
 
 /* ---- formulario de posteo ---- */
@@ -347,7 +347,7 @@ button:hover, input[type=submit]:hover {
   background: var(--bg);
 }
 .thread-op {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--purple);
   padding-left: 6px;
 }
 
@@ -357,7 +357,7 @@ button:hover, input[type=submit]:hover {
   font-size: 14px;
 }
 .post-head .name {
-  color: var(--accent);
+  color: var(--green);
   font-weight: bold;
 }
 .post-head .no { color: var(--link); }
@@ -367,7 +367,7 @@ button:hover, input[type=submit]:hover {
   word-break: break-word;
 }
 .comment .quotelink {
-  color: var(--accent);
+  color: var(--green);
   font-weight: bold;
 }
 .thread-image {
@@ -386,12 +386,12 @@ button:hover, input[type=submit]:hover {
 /* ---- respuestas ---- */
 .replies {
   margin: 4px 0 0 12px;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--green);
   padding-left: 10px;
 }
 .reply {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border);
+  border-left: 3px solid var(--green);
   background: var(--bg-alt);
   padding: 5px 8px;
   margin-bottom: 6px;
@@ -708,7 +708,7 @@ textarea::placeholder {
 }
 .rp-grid-limit { max-height: 260px; overflow-y: auto; }
 .rp-grid a {
-  color: var(--accent);
+  color: var(--red);
   text-decoration: none;
   font-size: 12px;
   white-space: nowrap;
@@ -750,7 +750,7 @@ textarea::placeholder {
 }
 .rp-quickforos a {
   font-family: "Courier New", monospace;
-  color: var(--accent);
+  color: var(--red);
   text-decoration: none;
   font-size: 14px;
 }
@@ -919,7 +919,7 @@ textarea::placeholder {
 }
 .profile-post {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--purple);
   background: var(--bg-alt);
   padding: 6px 8px;
   font-size: 14px;
@@ -1044,7 +1044,7 @@ textarea::placeholder {
 }
 .my-post {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--purple);
   background: var(--bg-alt);
   padding: 8px 10px;
   margin-bottom: 8px;
@@ -1191,7 +1191,7 @@ textarea::placeholder {
   text-align: left;
 }
 .fo-body:hover .fo-name { text-decoration: underline; }
-.fo-name { font-size: 15px; font-weight: bold; color: var(--link); }
+.fo-name { font-size: 15px; font-weight: bold; color: var(--red); }
 .fo-status {
   font-size: 12px;
   font-weight: bold;
