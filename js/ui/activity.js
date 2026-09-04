@@ -215,14 +215,15 @@ function makeLikeBtn(boardId, post, threadNo, replyNo) {
   el.className = "like-btn";
   var key = threadNo != null && replyNo != null ? boardId + "/" + threadNo + "/" + replyNo : boardId + "/" + post.no;
   el.dataset.like = key;
-  var liked = isLiked(boardId, threadNo != null ? threadNo : post.no, replyNo);
-  el.classList.toggle("liked", liked);
-  el.textContent = (liked ? "Me gusta" : "Like") + ((post.likes || 0) ? " (" + post.likes + ")" : "");
+  var count = function () { return post.likes || 0; };
+  var label = function () {
+    return (isLiked(boardId, threadNo != null ? threadNo : post.no, replyNo) ? "Me gusta" : "Like") + " (" + count() + ")";
+  };
+  el.textContent = label();
   el.addEventListener("click", function () {
     toggleLike(boardId, threadNo != null ? threadNo : post.no, replyNo);
-    var nowLiked = isLiked(boardId, threadNo != null ? threadNo : post.no, replyNo);
-    el.classList.toggle("liked", nowLiked);
-    el.textContent = (nowLiked ? "Me gusta" : "Like") + ((post.likes || 0) ? " (" + post.likes + ")" : "");
+    el.classList.toggle("liked", isLiked(boardId, threadNo != null ? threadNo : post.no, replyNo));
+    el.textContent = label();
   });
   return el;
 }

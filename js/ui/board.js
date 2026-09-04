@@ -263,6 +263,14 @@ function makePostForm(boardId) {
       finish(null);
     }
   });
+
+  /* publicar con la tecla Enter (Shift+Enter = salto de linea) */
+  form.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey) {
+      ev.preventDefault();
+      form.requestSubmit();
+    }
+  });
   return form;
 }
 
@@ -298,13 +306,36 @@ function renderThread(boardId, thread) {
 
   var replies = document.createElement("div");
   replies.className = "replies";
-  thread.replies.forEach(function (r) {
-    if (r.ownerType === "user" && isBanned(r.ownerPub)) return;
-    replies.appendChild(renderReply(boardId, thread, r));
+  var visibleReplies = thread.replies.filter(function (r) {
+    return !(r.ownerType === "user" && isBanned(r.ownerPub));
   });
+  var replyNodes = [];
+  visibleReplies.forEach(function (r) {
+    replyNodes.push(renderReply(boardId, thread, r));
+  });
+  /* por defecto se muestra una sola respuesta; si hay mas, el resto quedan
+     ocultas y se despliegan con el boton "ver mas respuestas" */
+  var moreBtn = null;
+  if (replyNodes.length > 1) {
+    var hidden = replyNodes.slice(0, replyNodes.length - 1);
+    hidden.forEach(function (n) { n.style.display = "none"; });
+    replyNodes.forEach(function (n) { replies.appendChild(n); });
+    moreBtn = document.createElement("button");
+    moreBtn.type = "button";
+    moreBtn.className = "toggle-reply";
+    moreBtn.textContent = "Ver " + hidden.length + " respuestas mas";
+    moreBtn.addEventListener("click", function () {
+      var collapsed = hidden.every(function (n) { return n.style.display === "none"; });
+      hidden.forEach(function (n) { n.style.display = collapsed ? "" : "none"; });
+      moreBtn.textContent = collapsed ? "Mostrar menos" : "Ver " + hidden.length + " respuestas mas";
+    });
+  } else {
+    replyNodes.forEach(function (n) { replies.appendChild(n); });
+  }
 
   var rf = makeReplyForm(boardId, thread);
   replies.appendChild(rf);
+  if (moreBtn) replies.insertBefore(moreBtn, rf);
   wrap.appendChild(replies);
 
   var toggle = document.createElement("button");
@@ -440,6 +471,14 @@ function makeReplyForm(boardId, thread) {
       });
     } else {
       finish(null);
+    }
+  });
+
+  /* publicar con la tecla Enter (Shift+Enter = salto de linea) */
+  form.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey) {
+      ev.preventDefault();
+      form.requestSubmit();
     }
   });
   return form;

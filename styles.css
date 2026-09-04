@@ -7,6 +7,7 @@
 }
 
 :root {
+  color-scheme: light dark;
   /* Tokyo Night Day (tema claro) — ver assets/tokyo-night-light.md */
   --bg: #e1e2e7;            /* BG principal */
   --bg-alt: #d0d5e3;        /* BG surf/alt */
@@ -14,7 +15,7 @@
   --bg-toolbar: #c1c9df;    /* BG_DARK1 / toolbar */
   --bg-inset: #c4c8da;      /* BG resaltado */
   --border: #b4b5b9;        /* borde general */
-  --text: #3760bf;          /* texto principal */
+  --text: #20242c;          /* texto principal: negro para legibilidad */
   --text-side: #4b5f99;     /* texto secundario legible */
   --comment: #848cb5;       /* comentarios */
   --accent: #2e7de9;        /* azul acento principal */
@@ -30,6 +31,35 @@
   --link-visited: var(--purple);
   --muted: var(--comment);
   --quote: var(--green);
+}
+
+/* si el navegador/sistema esta en modo oscuro (o una extension dark lo impone),
+   la pagina usa el tema Tokyo Night oscuro original en vez de arruinar el claro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1b26;            /* BG_MAIN */
+    --bg-alt: #24283b;        /* BG_STORM */
+    --bg-flo: #1f2335;        /* BG flotante */
+    --bg-toolbar: #16161e;    /* BG_DARK */
+    --bg-inset: #2a2f45;      /* BG resaltado */
+    --border: rgba(86, 95, 137, 0.4);  /* linea suave */
+    --text: #c0caf5;          /* FG_MAIN */
+    --text-side: #a9b1d6;     /* FG_SIDE */
+    --comment: #565f89;       /* FG_COMMENT */
+    --accent: #f7768e;        /* NEON_RED */
+    --orange: #ff9e64;
+    --yellow: #e0af68;
+    --green: #9ece6a;
+    --teal: #73daca;
+    --cyan: #7dcfff;
+    --blue: #7aa2f7;
+    --purple: #bb9af7;
+    --red: #f7768e;
+    --link: var(--blue);
+    --link-visited: var(--purple);
+    --muted: var(--text-side);
+    --quote: var(--green);
+  }
 }
 
 body {
