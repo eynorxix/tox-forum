@@ -34,6 +34,94 @@ function reportPublish(ok) {
   }
 }
 
+/* ===== Drag and Drop API: area de arrastrar/soltar o elegir imagen con preview =====
+   Convierte un <input type="file"> en un layout arrastrable:
+   - si no hay archivo muestra el mensaje "arrastra tu imagen desde una carpeta...",
+   - al soltar (o elegir con clic) muestra el preview de la imagen dentro del area,
+   - el boton "Quitar" vacia la seleccion. */
+function createDropzone(fileInput) {
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  var zone = document.createElement("div");
+  zone.className = "dropzone";
+
+  var body = document.createElement("div");
+  body.className = "dropzone-body";
+
+  var empty = document.createElement("div");
+  empty.className = "dropzone-empty";
+  empty.innerHTML = '<span class="dz-icon">&#8595;</span> Arrastra tu imagen desde una carpeta' +
+    '<small>o haz clic para elegir un archivo de imagen desde tu equipo</small>';
+
+  var preview = document.createElement("div");
+  preview.className = "dropzone-preview";
+  preview.style.display = "none";
+  var img = document.createElement("img");
+  var clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "dropzone-clear";
+  clearBtn.textContent = "Quitar";
+  preview.appendChild(img);
+  preview.appendChild(clearBtn);
+
+  body.appendChild(empty);
+  body.appendChild(preview);
+  zone.appendChild(fileInput);
+  zone.appendChild(body);
+
+  function setEmpty() {
+    preview.style.display = "none";
+    empty.style.display = "block";
+    zone.classList.remove("has-file");
+  }
+  function showFile(f) {
+    if (!f) { setEmpty(); return; }
+    var url = URL.createObjectURL(f);
+    img.src = url;
+    preview.style.display = "inline-block";
+    empty.style.display = "none";
+    zone.classList.add("has-file");
+  }
+  function pickFromInput() {
+    showFile(fileInput.files && fileInput.files[0]);
+  }
+
+  fileInput.addEventListener("change", pickFromInput);
+  body.addEventListener("click", function () { fileInput.click(); });
+
+  clearBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    fileInput.value = "";
+    setEmpty();
+  });
+
+  body.addEventListener("dragover", function (ev) {
+    ev.preventDefault();
+    zone.classList.add("dragover");
+  });
+  body.addEventListener("dragleave", function () {
+    zone.classList.remove("dragover");
+  });
+  body.addEventListener("drop", function (ev) {
+    ev.preventDefault();
+    zone.classList.remove("dragover");
+    var dt = ev.dataTransfer;
+    var f = dt && dt.files && dt.files[0];
+    if (!f) return;
+    if (f.type && f.type.indexOf("image/") !== 0) {
+      toast("Solo se aceptan imagenes", "warn");
+      return;
+    }
+    /* asigna el archivo soltado al input para que el submit lo lea igual */
+    var d = new DataTransfer();
+    d.items.add(f);
+    fileInput.files = d.files;
+    showFile(f);
+  });
+
+  return zone;
+}
+
 export function renderBoard(id) {
   purgeExpired();
   var b = BOARDS.find(function (x) { return x.id === id; });
@@ -89,23 +177,35 @@ function makePostForm(boardId) {
   }
 
   var tbl = document.createElement("table");
-  var rows = [
-    ["Archivo", '<input type="file" name="file" accept="image/*">'],
-    ["Comentario", '<textarea name="comment" placeholder="Escribe tu publicacion..." required></textarea>']
-  ];
-  rows.forEach(function (r) {
-    var tr = document.createElement("tr");
-    var td1 = document.createElement("td");
-    td1.className = "row-title";
-    var lab = document.createElement("label");
-    lab.textContent = r[0];
-    td1.appendChild(lab);
-    var td2 = document.createElement("td");
-    td2.innerHTML = r[1];
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tbl.appendChild(tr);
-  });
+  var trFile = document.createElement("tr");
+  var tdFile1 = document.createElement("td");
+  tdFile1.className = "row-title";
+  var labFile = document.createElement("label");
+  labFile.textContent = "Archivo";
+  tdFile1.appendChild(labFile);
+  var tdFile2 = document.createElement("td");
+  var fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.name = "file";
+  fileInput.accept = "image/*";
+  fileInput.style.display = "none";
+  tdFile2.appendChild(createDropzone(fileInput));
+  trFile.appendChild(tdFile1);
+  trFile.appendChild(tdFile2);
+  tbl.appendChild(trFile);
+
+  var trCom = document.createElement("tr");
+  var tdCom1 = document.createElement("td");
+  tdCom1.className = "row-title";
+  var labCom = document.createElement("label");
+  labCom.textContent = "Comentario";
+  tdCom1.appendChild(labCom);
+  var tdCom2 = document.createElement("td");
+  tdCom2.innerHTML = '<textarea name="comment" placeholder="Escribe tu publicacion..." required></textarea>';
+  trCom.appendChild(tdCom1);
+  trCom.appendChild(tdCom2);
+  tbl.appendChild(trCom);
+
   var trAct = document.createElement("tr");
   var tdAct = document.createElement("td");
   tdAct.colSpan = 2;
@@ -283,7 +383,7 @@ function makeReplyForm(boardId, thread) {
   var inpImg = document.createElement("input");
   inpImg.type = "file";
   inpImg.accept = "image/*";
-  rImg.appendChild(inpImg);
+  rImg.appendChild(createDropzone(inpImg));
   form.appendChild(rImg);
 
   var rTxt = document.createElement("div");

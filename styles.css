@@ -316,6 +316,64 @@ a:visited { color: var(--link-visited); }
   white-space: nowrap;
 }
 
+/* ===== Drag and Drop: area de arrastrar/soltar imagen con preview ===== */
+.dropzone { margin-bottom: 4px; }
+.dropzone-body {
+  border: 1px dashed var(--accent);
+  background: var(--bg-alt);
+  border-radius: 6px;
+  padding: 14px 10px;
+  min-height: 78px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+.dropzone-body:hover,
+.dropzone.dragover .dropzone-body {
+  background: var(--bg-inset);
+  border-color: var(--accent);
+}
+.dropzone-empty small {
+  display: block;
+  margin-top: 4px;
+  color: var(--comment);
+  font-size: 12px;
+}
+.dropzone-empty .dz-icon {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+}
+.dropzone-preview {
+  position: relative;
+  display: inline-block;
+}
+.dropzone-preview img {
+  display: block;
+  max-width: 200px;
+  max-height: 150px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.dropzone-clear {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: none;
+  background: var(--red);
+  color: #16161e;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.dropzone-clear:hover { filter: brightness(1.1); }
+
 button, input[type=submit] {
   border: 1px solid var(--border);
   background: var(--bg-alt);
