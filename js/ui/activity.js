@@ -4,13 +4,14 @@ import {
   isAnon, getMe, state, getBoard, save,
   followingList, unfollowUser, isFollowing,
   notifications, markNotifsRead, clearNotifications, addNotification, unreadCount,
+  addReplyNotification, wasReplyNotified, markReplyNotified,
   savedForums, toggleSavedForum, isSaved,
   postsByAuthor, isLiked, toggleLike
 } from "../store/db.js";
 import { session } from "../store/session.js";
-import { linksInText, fmtDate } from "../utils/text.js";
+import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { openImage } from "./lightbox.js";
-import { openProfile } from "./appshell.js";
+import { openProfile, navTo } from "./appshell.js";
 import { isBanned } from "../store/moderation.js";
 
 /* ---------- Inicio (seguidos) ---------- */
@@ -134,6 +135,7 @@ export function renderFollowingFeed() {
     body.className = "comment";
     body.innerHTML = linksInText(item.post.comment);
     it.appendChild(body);
+    attachAutoEmbeds(it);
     it.appendChild(makeLikeBtn(item.b.id, item.post, item.type === "reply" ? item.th.no : null, item.type === "reply" ? item.post.no : null));
     list.appendChild(it);
   });
@@ -258,6 +260,63 @@ function refreshFeed() {
 /* ---------- notificaciones ---------- */
 var notifPop = null;
 
+/* extrae los numeros citados (>>n) del texto de un comentario */
+function quotedNos(comment) {
+  var out = [];
+  var re = /&gt;&gt;(\d+)|>>(\d+)/g;
+  var m;
+  while ((m = re.exec(comment || "")) !== null) {
+    var n = parseInt(m[1] || m[2], 10);
+    if (!isNaN(n) && out.indexOf(n) < 0) out.push(n);
+  }
+  return out;
+}
+
+/* detecta respuestas nuevas a los posts del usuario actual y genera
+   notificaciones estructuradas. Alcance: respuestas a hilos donde el usuario
+   es el creador, y respuestas que citen (>>n) un post o respuesta suya.
+   Devuelve cuantas notificaciones agregó. Se llama tras sincronizar boards. */
+export function scanReplyNotifications() {
+  var me = getMe();
+  if (!me || !me.pubHex) return 0;
+  var added = 0;
+  BOARDS.forEach(function (b) {
+    var coll = getBoard(b.id);
+    coll.forEach(function (th) {
+      var myThread = th.ownerType === "user" && th.ownerPub === me.pubHex;
+      var myReplyNos = []; /* numeros de respuestas propias en este hilo */
+      (th.replies || []).forEach(function (r) {
+        if (r.ownerType === "user" && r.ownerPub === me.pubHex) myReplyNos.push(r.no);
+      });
+      th.replies.forEach(function (r) {
+        if (r.ownerType !== "user" || r.ownerPub === me.pubHex) return;
+        if (isBanned(r.ownerPub)) return;
+        if (wasReplyNotified(b.id, th.no, r.no)) return;
+        var targetsMyPost = false;
+        if (myThread) {
+          targetsMyPost = true;
+        } else {
+          var qs = quotedNos(r.comment);
+          targetsMyPost = qs.indexOf(th.no) >= 0 ||
+            qs.some(function (n) { return myReplyNos.indexOf(n) >= 0; });
+        }
+        if (!targetsMyPost) return;
+        markReplyNotified(b.id, th.no, r.no);
+        addReplyNotification({
+          boardId: b.id,
+          threadNo: th.no,
+          replyNo: r.no,
+          fromName: r.ownerName || r.name || "Anonimo",
+          fromPub: r.ownerPub,
+          text: " respondi&oacute; a tu post en /" + b.id + "/ (hilo No." + th.no + ")"
+        });
+        added++;
+      });
+    });
+  });
+  return added;
+}
+
 /* detecta posts nuevos de usuarios seguidos y genera notificaciones.
    Se llama desde el intervalo de 60s y despues de seguir. */
 export function syncFollowedNotifications() {
@@ -353,6 +412,108 @@ export function closeNotifications() {
 }
 
 export function isNotifOpen() { return !!notifPop; }
+
+/* ---------- layout completo de notificaciones (reemplaza el centro del layout) ---------- */
+export function openNotification(boardId, threadNo, replyNo) {
+  session.focus = { boardId: boardId, threadNo: threadNo, replyNo: replyNo };
+  navTo(boardId);
+}
+
+export function renderNotifications() {
+  var wrap = document.createElement("div");
+  wrap.className = "notif-page";
+  wrap.id = "notif-page";
+
+  var back = document.createElement("button");
+  back.type = "button";
+  back.className = "back-btn";
+  back.textContent = "← Volver";
+  if (session.lastBoard) back.dataset.board = session.lastBoard;
+  wrap.appendChild(back);
+
+  var title = document.createElement("div");
+  title.className = "board-header";
+  var h = document.createElement("h2");
+  h.innerHTML = "Notificaciones <span>- respuestas a tus posts</span>";
+  title.appendChild(h);
+  wrap.appendChild(title);
+
+  if (isAnon()) {
+    var notice = document.createElement("div");
+    notice.className = "notice";
+    notice.innerHTML = 'Para recibir notificaciones de respuestas necesitas una cuenta. <a href="#" id="reg-link">Reg&iacute;strate</a> y publica en los foros.';
+    wrap.appendChild(notice);
+    return wrap;
+  }
+
+  var list = notifications();
+  markNotifsRead();
+  refreshNotifBadge();
+
+  if (list.length === 0) {
+    var empty = document.createElement("div");
+    empty.className = "notice";
+    empty.textContent = "Sin notificaciones por ahora. Cuando alguien responda a tus posts (o cites a alguien), apareceran aqui.";
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  var ul = document.createElement("ul");
+  ul.className = "notif-list";
+  list.forEach(function (x) {
+    var li = document.createElement("li");
+    li.className = "notif-item" + (x.type === "reply" ? " reply" : "");
+
+    if (x.type === "reply") {
+      var from = document.createElement("span");
+      from.className = "notif-from";
+      from.textContent = x.fromName || "Anonimo";
+      li.appendChild(from);
+      var txt = document.createElement("span");
+      txt.innerHTML = x.text || " respondio a tu post.";
+      li.appendChild(txt);
+      var forum = document.createElement("span");
+      forum.className = "feed-forum";
+      forum.textContent = "/" + x.boardId + "/";
+      forum.title = "Ir al foro";
+      li.appendChild(forum);
+      li.addEventListener("click", function () {
+        openNotification(x.boardId, x.threadNo, x.replyNo);
+      });
+    } else {
+      li.textContent = x.text;
+    }
+
+    var d = document.createElement("span");
+    d.className = "date";
+    d.textContent = " " + fmtDate(x.ts);
+    li.appendChild(d);
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+
+  var clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "btn2 notif-clear";
+  clear.textContent = "Borrar todas";
+  clear.addEventListener("click", function () {
+    clearNotifications();
+    refreshNotifBadge();
+    renderCurrentNotifPage();
+  });
+  wrap.appendChild(clear);
+  return wrap;
+}
+
+/* re-renderiza solo la pagina de notificaciones si esta abierta (tras borrar) */
+function renderCurrentNotifPage() {
+  var host = document.getElementById("notif-page");
+  if (host) {
+    var fresh = document.createElement("div");
+    fresh.appendChild(renderNotifications());
+    host.replaceWith(fresh.firstChild);
+  }
+}
 
 /* ---------- foros guardados ---------- */
 var savedBackdrop = null;

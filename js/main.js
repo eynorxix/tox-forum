@@ -1,6 +1,6 @@
 /* ===== punto de entrada: arranque, eventos globales y semillas ===== */
 import { session } from "./store/session.js";
-import { purgeExpired } from "./store/db.js";
+import { purgeExpired, myPosts } from "./store/db.js";
 import { setHooks } from "./ui/appshell.js";
 import { go, render, showProfile, showMyProfile } from "./ui/view.js";
 import { renderNav, refreshChip } from "./ui/nav.js";
@@ -14,7 +14,7 @@ import { acHide, isAcOpen } from "./utils/autocomplete.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
 import {
   closeNotifications, isNotifOpen, refreshNotifBadge,
-  closeSaved, isSavedOpen, syncFollowedNotifications
+  closeSaved, isSavedOpen, syncFollowedNotifications, scanReplyNotifications
 } from "./ui/activity.js";
 
 /* el controlador de presentacion inyecta sus acciones a los componentes */
@@ -39,6 +39,8 @@ document.addEventListener("keydown", function (ev) {
     } else if (session.profileView) {
       go(session.profileView.boardId);
     } else if (session.currentView === "seguidos") {
+      go(session.lastBoard);
+    } else if (session.currentView === "notificaciones") {
       go(session.lastBoard);
     } else if (isAcOpen()) {
       acHide();
@@ -118,18 +120,43 @@ document.addEventListener("click", function (ev) {
 setInterval(function () {
   var removed = purgeExpired();
   syncFollowedNotifications();
+  var newReplies = scanReplyNotifications();
   refreshNotifBadge();
-  if (session.currentView) {
-    if (removed) {
-      render();
-    } else if (session.currentView !== "home" && session.currentView !== "seguidos" &&
-               !session.profileView && !session.myProfileView) {
-      var bid = session.currentView;
-      /* la suscripcion en vivo ya trae posts nuevos: solo sondeamos de respaldo
-         por si la conexion a los relays se cayo sin deteccion */
-      if (!isWatchingBoard(bid)) {
-        syncBoard(bid, function (changed) { if (changed && session.currentView === bid) render(); });
+
+  /* sondear de respaldo los foros donde el usuario publico (para no esperar a
+     que el foro este abierto para descubrir que alguien respondio) */
+  var ownBoardIds = [];
+  myPosts().forEach(function (p) {
+    if (ownBoardIds.indexOf(p.boardId) < 0) ownBoardIds.push(p.boardId);
+  });
+  var currentIsBoard = !session.profileView && !session.myProfileView &&
+    session.currentView !== "home" && session.currentView !== "seguidos" &&
+    session.currentView !== "notificaciones";
+  ownBoardIds.forEach(function (id) {
+    if (currentIsBoard && id === session.currentView) {
+      if (!isWatchingBoard(id)) {
+        syncBoard(id, function (changed) {
+          if (changed) {
+            var more = scanReplyNotifications();
+            refreshNotifBadge();
+            if (more && session.currentView === id) render();
+          }
+        });
       }
+      return;
+    }
+    syncBoard(id, function (changed) {
+      if (changed) {
+        var more = scanReplyNotifications();
+        refreshNotifBadge();
+        if (more && (session.currentView === "notificaciones" || session.currentView === "home")) render();
+      }
+    });
+  });
+
+  if (session.currentView) {
+    if (removed || newReplies) {
+      render();
     }
   }
 }, 60000);
@@ -153,7 +180,11 @@ render();
    Si la vista actual es home/seguidos, re-renderiza para actualizar los
    conteos y el contenido que ya cargo. */
 syncAllBoards(function (changed) {
-  if (changed && (session.currentView === "home" || session.currentView === "seguidos")) {
+  var newReplies = scanReplyNotifications();
+  refreshNotifBadge();
+  if ((changed || newReplies) &&
+      (session.currentView === "home" || session.currentView === "seguidos" ||
+       session.currentView === "notificaciones")) {
     render();
   }
 });

@@ -3,9 +3,9 @@ import { session } from "../store/session.js";
 import { isAnon } from "../store/db.js";
 import { renderNav, refreshChip } from "./nav.js";
 import { renderHome } from "./home.js";
-import { renderFollowingFeed } from "./activity.js";
+import { renderFollowingFeed, renderNotifications } from "./activity.js";
 import { renderSidebar } from "./sidebar.js";
-import { renderBoard, bindQuotelinks } from "./board.js";
+import { renderBoard, bindQuotelinks, applyFocus } from "./board.js";
 import { renderProfile, renderMyProfile } from "./profile.js";
 import { renderRightPanel } from "./rightpanel.js";
 import { openAuth } from "./auth.js";
@@ -14,18 +14,19 @@ import { syncBoard, watchBoard, unwatchBoard, setNamesRefresh } from "../utils/r
 
 setNamesRefresh(function () {
   if (session.currentView && session.currentView !== "home" &&
-      session.currentView !== "seguidos" &&
+      session.currentView !== "seguidos" && session.currentView !== "notificaciones" &&
       !session.profileView && !session.myProfileView) render();
 });
 
 export function go(view) {
+  var hadFocus = !!(session.focus && session.focus.boardId === view);
   session.myProfileView = false;
   session.profileView = null;
   session.currentView = view;
   refreshChip();
   renderNav();
   render();
-  window.scrollTo(0, 0);
+  if (!hadFocus) window.scrollTo(0, 0);
 }
 
 /* ---- suscripcion en vivo del foro abierto ---- */
@@ -38,7 +39,8 @@ function scheduleLiveRender() {
     liveRenderTimer = null;
     var ok = activeWatch && session.currentView === activeWatch &&
       !session.profileView && !session.myProfileView &&
-      session.currentView !== "home" && session.currentView !== "seguidos";
+      session.currentView !== "home" && session.currentView !== "seguidos" &&
+      session.currentView !== "notificaciones";
     if (ok) render();
   }, 300);
 }
@@ -80,6 +82,7 @@ export function render() {
     var pvBoard = session.profileView ? session.profileView.boardId : session.currentView;
     if (session.myProfileView) pvBoard = session.lastBoard;
     if (session.currentView === "seguidos") pvBoard = session.lastBoard;
+    if (session.currentView === "notificaciones") pvBoard = session.lastBoard;
     layout.appendChild(renderSidebar(pvBoard));
     var col = document.createElement("div");
     col.className = "main";
@@ -89,6 +92,8 @@ export function render() {
       col.appendChild(renderProfile(session.profileView.boardId, session.profileView.user));
     } else if (session.currentView === "seguidos") {
       col.appendChild(renderFollowingFeed());
+    } else if (session.currentView === "notificaciones") {
+      col.appendChild(renderNotifications());
     } else {
       col.appendChild(renderBoard(pvBoard));
     }
@@ -100,13 +105,15 @@ export function render() {
   /* en una vista de foro: suscripcion en vivo a posts nuevos (Nostr) y un
      sondeo inicial como respaldo */
   if (!session.myProfileView && !session.profileView &&
-      session.currentView !== "home" && session.currentView !== "seguidos") {
+      session.currentView !== "home" && session.currentView !== "seguidos" &&
+      session.currentView !== "notificaciones") {
     var syncCtx = session.currentView;
     ensureLiveWatch(syncCtx);
     syncBoard(syncCtx, function (changed) {
       if (changed && session.currentView === syncCtx &&
           !session.profileView && !session.myProfileView) render();
     });
+    applyFocus();
   } else {
     stopLiveWatch();
   }

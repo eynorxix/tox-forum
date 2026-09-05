@@ -31,6 +31,7 @@
   --link-visited: var(--purple);
   --muted: var(--comment);
   --quote: var(--green);
+  --pink: #d63d6e;
 }
 
 /* si el navegador/sistema esta en modo oscuro (o una extension dark lo impone),
@@ -59,6 +60,7 @@
     --link-visited: var(--purple);
     --muted: var(--text-side);
     --quote: var(--green);
+    --pink: #f7768e;
   }
 }
 
@@ -77,6 +79,52 @@ a {
 }
 a:hover { text-decoration: underline; }
 a:visited { color: var(--link-visited); }
+
+/* enlaces automáticos de URLs pegadas en posts */
+.auto-link {
+  color: var(--pink);
+  font-weight: bold;
+}
+.auto-link:hover {
+  color: var(--pink);
+  text-decoration: underline;
+}
+.auto-link:visited { color: var(--pink); }
+/* miniaturas incorporadas (YouTube / imágenes / GIFs) */
+.embed {
+  margin: 8px 0;
+  max-width: 320px;
+  width: calc(100% - 8px);
+}
+.embed-link { position: relative; display: inline-block; }
+.embed-thumb,
+.embed-img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-alt);
+}
+.embed-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 34px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.yt-embed .embed-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9px;
+  transition: background .15s ease;
+}
+.yt-embed .embed-link:hover::after { background: rgba(0, 0, 0, 0.25); }
 
 /* ===== Barra superior (fija al hacer scroll) ===== */
 #topbar {
@@ -112,6 +160,21 @@ a:visited { color: var(--link-visited); }
 #board-nav a.active {
   color: var(--accent);
   font-weight: bold;
+}
+.notif-badge-nav {
+  display: inline-block;
+  margin-left: 4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #16161e;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 15px;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .my-profile-chip {
@@ -1740,6 +1803,26 @@ textarea::placeholder {
 }
 .notif-item .date { display: block; color: var(--comment); font-size: 12px; }
 .notif-clear { margin-top: 10px; width: 100%; }
+
+/* ---- layout completo de notificaciones (reemplaza el centro del layout) ---- */
+.notif-page { padding-bottom: 24px; }
+.notif-page .notif-list { margin-top: 4px; }
+.notif-item.reply {
+  cursor: pointer;
+  transition: background 0.12s ease;
+  border-left: 3px solid var(--purple);
+  padding-left: 10px;
+}
+.notif-item.reply:hover { background: var(--bg-alt); border-left-color: var(--accent); }
+.notif-item.reply .notif-from { font-weight: bold; color: var(--accent); margin-right: 6px; }
+.notif-item.reply .feed-forum {
+  color: var(--red);
+  text-decoration: none;
+  margin: 0 4px;
+}
+.notif-item.reply .feed-forum:hover { text-decoration: underline; }
+.notif-item.reply .date { margin-top: 3px; }
+.notif-page .notif-clear { max-width: 220px; display: block; margin-top: 14px; }
 
 /* ===== foros guardados ===== */
 .fo-cell.saved .fo-status { color: var(--teal); border-color: var(--teal); }

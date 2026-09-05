@@ -3,7 +3,7 @@ import { BOARDS } from "../config.js";
 import { getBoard, nextNo, save, isAnon, meName, getMe, purgeExpired, canPostBoard } from "../store/db.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
-import { linksInText, fmtDate } from "../utils/text.js";
+import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { RELAYS } from "../utils/relays.js";
@@ -14,6 +14,7 @@ import { openImage } from "./lightbox.js";
 import { refresh } from "./appshell.js";
 import { likeButton } from "./activity.js";
 import { isBanned } from "../store/moderation.js";
+import { session } from "../store/session.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -300,6 +301,7 @@ function renderThread(boardId, thread) {
   cmt.className = "comment";
   cmt.innerHTML = linksInText(thread.comment);
   op.appendChild(cmt);
+  attachAutoEmbeds(op);
   op.appendChild(likeButton(boardId, thread, null, null));
 
   wrap.appendChild(op);
@@ -309,6 +311,7 @@ function renderThread(boardId, thread) {
   var visibleReplies = thread.replies.filter(function (r) {
     return !(r.ownerType === "user" && isBanned(r.ownerPub));
   });
+  var focusHere = !!(session.focus && session.focus.boardId === boardId && session.focus.threadNo === thread.no);
   var replyNodes = [];
   visibleReplies.forEach(function (r) {
     replyNodes.push(renderReply(boardId, thread, r));
@@ -318,17 +321,28 @@ function renderThread(boardId, thread) {
   var moreBtn = null;
   if (replyNodes.length > 1) {
     var hidden = replyNodes.slice(0, replyNodes.length - 1);
-    hidden.forEach(function (n) { n.style.display = "none"; });
+    if (!focusHere) hidden.forEach(function (n) { n.style.display = "none"; });
     replyNodes.forEach(function (n) { replies.appendChild(n); });
-    moreBtn = document.createElement("button");
-    moreBtn.type = "button";
-    moreBtn.className = "toggle-reply";
-    moreBtn.textContent = "Ver " + hidden.length + " respuestas mas";
-    moreBtn.addEventListener("click", function () {
-      var collapsed = hidden.every(function (n) { return n.style.display === "none"; });
-      hidden.forEach(function (n) { n.style.display = collapsed ? "" : "none"; });
-      moreBtn.textContent = collapsed ? "Mostrar menos" : "Ver " + hidden.length + " respuestas mas";
-    });
+    if (focusHere) {
+      moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "toggle-reply";
+      moreBtn.textContent = "Mostrar menos";
+      moreBtn.addEventListener("click", function () {
+        hidden.forEach(function (n) { n.style.display = hidden.every(function (x) { return x.style.display === "none"; }) ? "" : "none"; });
+        moreBtn.textContent = hidden.every(function (x) { return x.style.display === "none"; }) ? "Mostrar menos" : "Ver " + hidden.length + " respuestas mas";
+      });
+    } else {
+      moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "toggle-reply";
+      moreBtn.textContent = "Ver " + hidden.length + " respuestas mas";
+      moreBtn.addEventListener("click", function () {
+        var collapsed = hidden.every(function (n) { return n.style.display === "none"; });
+        hidden.forEach(function (n) { n.style.display = collapsed ? "" : "none"; });
+        moreBtn.textContent = collapsed ? "Mostrar menos" : "Ver " + hidden.length + " respuestas mas";
+      });
+    }
   } else {
     replyNodes.forEach(function (n) { replies.appendChild(n); });
   }
@@ -390,6 +404,7 @@ function renderReply(boardId, thread, reply) {
   cmt.className = "comment";
   cmt.innerHTML = linksInText(reply.comment);
   div.appendChild(cmt);
+  attachAutoEmbeds(div);
   div.appendChild(likeButton(boardId, reply, thread.no, reply.no));
   return div;
 }
@@ -501,4 +516,26 @@ function highlightPost(no) {
   el.scrollIntoView({ block: "center", behavior: "smooth" });
   el.style.boxShadow = "0 0 0 3px var(--accent)";
   setTimeout(function () { el.style.boxShadow = ""; }, 1500);
+}
+
+/* aplica un foco pendiente de notificacion (session.focus): expande el hilo y
+   resalta la respuesta y su OP. Se llama tras renderizar el board. */
+export function applyFocus() {
+  var f = session.focus;
+  if (!f) return;
+  session.focus = null;
+  var replyNode = document.getElementById("reply-" + f.replyNo);
+  var threadNode = document.getElementById("thread-" + f.threadNo);
+  if (!replyNode && !threadNode) return;
+  if (threadNode) {
+    threadNode.style.outline = "3px solid var(--purple)";
+    setTimeout(function () { threadNode.style.outline = ""; }, 1600);
+  }
+  if (replyNode) {
+    replyNode.style.boxShadow = "0 0 0 3px var(--accent)";
+    setTimeout(function () { replyNode.style.boxShadow = ""; }, 1600);
+    replyNode.scrollIntoView({ block: "center", behavior: "smooth" });
+  } else if (threadNode) {
+    threadNode.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
 }

@@ -47,6 +47,7 @@ if (state.me && state.me.pubHex && /^Usuario /.test(state.me.name || "")) {
 if (!state.anonName) state.anonName = "";    /* ultimo nombre anonimo usado */
 if (!state.following) state.following = [];  /* pubHex que el usuario actual sigue */
 if (!state.notifications) state.notifications = [];
+if (!state.notifSeen) state.notifSeen = [];   /* claves de respuestas ya notificadas */
 if (!state.savedForums) state.savedForums = []; /* foros guardados */
 if (!state.likes) state.likes = [];          /* ids de posts con like del usuario actual */
 if (!state.createdForums) state.createdForums = []; /* foros creados por usuarios del navegador */
@@ -233,6 +234,43 @@ export function followingList() {
 /* ---------- notificaciones ---------- */
 export function addNotification(text) {
   state.notifications.unshift({ text: text, ts: Date.now(), read: false });
+  if (state.notifications.length > 60) state.notifications.length = 60;
+  save();
+}
+
+/* clave unica de una respuesta (board + no de hilo + no de respuesta) usada
+   para no duplicar notificaciones cuando el mismo reply llega por sondeo y por
+   la suscripcion en vivo. */
+export function replyNotifKey(boardId, threadNo, replyNo) {
+  return boardId + "/" + threadNo + "/" + replyNo;
+}
+
+export function wasReplyNotified(boardId, threadNo, replyNo) {
+  return (state.notifSeen || []).indexOf(replyNotifKey(boardId, threadNo, replyNo)) >= 0;
+}
+
+export function markReplyNotified(boardId, threadNo, replyNo) {
+  if (!state.notifSeen) state.notifSeen = [];
+  var key = replyNotifKey(boardId, threadNo, replyNo);
+  if (state.notifSeen.indexOf(key) < 0) state.notifSeen.push(key);
+  if (state.notifSeen.length > 400) state.notifSeen = state.notifSeen.slice(-400);
+  save();
+}
+
+/* notificacion estructurada: alguien respondio a un post tuyo. v:
+   { boardId, threadNo, replyNo, fromName, fromPub, text } */
+export function addReplyNotification(v) {
+  state.notifications.unshift({
+    type: "reply",
+    boardId: v.boardId,
+    threadNo: v.threadNo,
+    replyNo: v.replyNo,
+    fromName: v.fromName || "Anonimo",
+    fromPub: v.fromPub || null,
+    text: v.text || "",
+    ts: Date.now(),
+    read: false
+  });
   if (state.notifications.length > 60) state.notifications.length = 60;
   save();
 }

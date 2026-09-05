@@ -4,7 +4,7 @@ import { state, getBoard, nextNo, save, getMe, myPosts, myMainForum, isAnon, own
 import { session } from "../store/session.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
-import { linksInText, fmtDate } from "../utils/text.js";
+import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { RELAYS } from "../utils/relays.js";
@@ -127,6 +127,7 @@ export function renderProfile(boardId, user) {
     var div = document.createElement("div");
     div.className = "profile-post";
     div.innerHTML = linksInText(p);
+    attachAutoEmbeds(div);
     postsSec.appendChild(div);
   });
 
@@ -314,6 +315,7 @@ export function renderMyProfile() {
       body.className = "my-post-body";
       body.innerHTML = linksInText(item.post.comment);
       div.appendChild(body);
+      attachAutoEmbeds(div);
       var del = document.createElement("button");
       del.type = "button";
       del.textContent = "Eliminar";

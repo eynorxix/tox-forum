@@ -1,6 +1,6 @@
 /* ===== barra superior: navegacion por foros y chip de identidad ===== */
 import { BOARDS } from "../config.js";
-import { getMe, isAnon, isRegistered } from "../store/db.js";
+import { getMe, isAnon, isRegistered, unreadCount } from "../store/db.js";
 import { session } from "../store/session.js";
 
 export function renderNav() {
@@ -11,6 +11,18 @@ export function renderNav() {
   a.dataset.board = "home";
   if (session.currentView === "home" && !session.myProfileView) a.className = "active";
   nav.appendChild(a);
+  var n = document.createElement("a");
+  n.textContent = "[ notif ]";
+  n.title = "Notificaciones: respuestas a tus posts";
+  n.dataset.board = "notificaciones";
+  if (session.currentView === "notificaciones") n.className = "active";
+  var badge = document.createElement("span");
+  badge.className = "notif-badge-nav";
+  badge.id = "notif-badge";
+  badge.textContent = unreadCount();
+  badge.hidden = isAnon() || unreadCount() === 0;
+  n.appendChild(badge);
+  nav.appendChild(n);
   // Unicamentale usuarios registrados ven sus foros (principales + secundarios);
   var listed = [];
   BOARDS.forEach(function (b) {

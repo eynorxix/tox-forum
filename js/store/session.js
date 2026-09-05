@@ -3,5 +3,6 @@ export var session = {
   currentView: "home",
   profileView: null,
   myProfileView: false,
-  lastBoard: "d"
+  lastBoard: "d",
+  focus: null /* { boardId, threadNo, replyNo } al navegar a una notificacion */
 };
