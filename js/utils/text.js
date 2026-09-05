@@ -65,16 +65,30 @@ export function attachAutoEmbeds(root) {
 export function linksInText(text) {
   // 1) escapa el texto
   // 2) convierte >>n a quotelinks hacia el post
-  // 3) convierte URLs (http/https/www.) en enlaces rosa .auto-link
+  // 3) si una URL va entre corchetes [url] se oculta su texto (solo queda
+  //    la miniatura; funciona como stickers/embeeds limpios)
+  // 4) convierte URLs (http/https/www.) en enlaces rosa .auto-link
   //    (las miniaturas se agregan con attachAutoEmbeds)
+  var hidden = [];
   var out = esc(text).replace(/&gt;&gt;(\d+)/g, function (m, n) {
     return '<span class="quotelink" data-quote="' + n + '">&gt;&gt;' + n + '</span>';
+  });
+  out = out.replace(/\[[^\[\]]*(?:https?:\/\/|www\.)[^\[\]]*\]/g, function (m) {
+    var mm = m.match(/(?:https?:\/\/|www\.)[^\s<>"'\]]+/);
+    if (!mm) return m;
+    var href = unesc(mm[0].replace(/[.,:!?)\]}"']+$/, ""));
+    if (!/^https?:\/\//i.test(href)) href = "https://" + href;
+    hidden.push(href);
+    return "\u0000hl" + (hidden.length - 1) + "\u0000";
   });
   out = out.replace(/(?:https?:\/\/|www\.)[^\s<>"']+/g, function (m) {
     var display = m.trim().replace(/[.,:!?)\]}"']+$/, "");
     var href = unesc(display);
     if (!/^https?:\/\//i.test(href)) href = "https://" + href;
     return '<a class="auto-link" href="' + esc(href) + '" target="_blank" rel="noopener nofollow">' + display + '</a>';
+  });
+  out = out.replace(/\u0000hl(\d+)\u0000/g, function (m, i) {
+    return '<a class="auto-link hidden-link" href="' + esc(hidden[i]) + '" target="_blank" rel="noopener nofollow"></a>';
   });
   return out;
 }
