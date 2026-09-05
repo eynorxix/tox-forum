@@ -202,7 +202,7 @@ function makePostForm(boardId) {
   labCom.textContent = "Comentario";
   tdCom1.appendChild(labCom);
   var tdCom2 = document.createElement("td");
-  tdCom2.innerHTML = '<textarea name="comment" placeholder="Escribe tu publicacion..." required></textarea>';
+  tdCom2.innerHTML = '<textarea name="comment" placeholder="ESCRIBE TU POST... PARA OCULTAR URLS AGREGA DENTRO DE [...]" required></textarea>';
   trCom.appendChild(tdCom1);
   trCom.appendChild(tdCom2);
   tbl.appendChild(trCom);
