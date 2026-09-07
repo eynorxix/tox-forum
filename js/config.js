@@ -18,6 +18,8 @@ export var REG_KIND = 13370;   /* registro de usuario */
 export var REG_DTAG = "forosraiz-user-v1";
 export var ROLE_KIND = 39001;  /* roles y baneos del admin */
 export var ROLE_DTAG = "forosraiz-roles-v1";
+export var BAN_KIND = 39000;   /* lista de baneados legacy */
+export var BAN_DTAG = "forosraiz-banlist-v1";
 
 export var CATEGORIES = [
   "General",
