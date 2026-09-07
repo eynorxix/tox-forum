@@ -19,7 +19,7 @@ var CATS = [
   { label: "Animales", q: "animales" }
 ];
 
-const LIMIT = 40;
+const LIMIT = 20;
 
 export function isGifPickerOpen() { return !!backdrop; }
 
@@ -90,20 +90,54 @@ function maybeShowEmpty() {
 }
 
 function addGifCard(it) {
-  var img = (it.images && (it.images.fixed_width || it.images.fixed_height || it.images.original)) || null;
-  if (!img || !img.url) return;
+  var images = it.images || {};
+  var thumb = images.preview_gif || images.fixed_width_small || images.fixed_width;
+  var full = images.fixed_width || images.original;
+  if (!thumb || !thumb.url) return;
   var cell = document.createElement("button");
   cell.type = "button";
   cell.className = "gifpicker-cell";
   var im = document.createElement("img");
   im.loading = "lazy";
-  im.src = img.url;
+  im.decoding = "async";
+  im.width = thumb.width || 200;
+  im.height = thumb.height || 200;
   im.alt = it.title || "gif";
   im.title = it.title || "gif";
+  /* arranca con la miniatura ligera (~30KB, se ve al instante) y se sube a la
+     version animada completa solo cuando entra al viewport */
+  im.dataset.thumb = thumb.url;
+  im.dataset.full = (full && full.url) || thumb.url;
+  im.src = im.dataset.thumb;
   cell.appendChild(im);
-  cell.addEventListener("click", function () { pickGif(it.images.original ? it.images.original.url : img.url); });
+  /* hover/focus: carga la animacion completa de una */
+  var upgrade = function () {
+    if (im.dataset.full && im.src !== im.dataset.full) im.src = im.dataset.full;
+  };
+  cell.addEventListener("mouseenter", upgrade);
+  cell.addEventListener("focus", upgrade);
+  cell.addEventListener("click", function () {
+    var u = (images.original && images.original.url) || (full && full.url) || thumb.url;
+    pickGif(u);
+  });
   var grid = backdrop.querySelector(".gifpicker-grid");
   grid.appendChild(cell);
+  if (state.io) state.io.observe(im);
+}
+
+function makeObserver(root) {
+  if (typeof IntersectionObserver === "undefined") return null;
+  return new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var im = e.target;
+      if (!im.dataset) return;
+      if (e.isIntersecting) {
+        if (im.dataset.full && im.src !== im.dataset.full) im.src = im.dataset.full;
+      } else {
+        if (im.dataset.thumb && im.dataset.full && im.src === im.dataset.full) im.src = im.dataset.thumb;
+      }
+    });
+  }, { root: root, rootMargin: "120px 0px" });
 }
 
 function buildGrid() {
@@ -120,9 +154,15 @@ function startSearch(q) {
   state.stamp = (state.stamp || 0) + 1;
   var grid = backdrop.querySelector(".gifpicker-grid");
   if (grid) grid.innerHTML = "";
+  if (state.io) state.io.disconnect();
+  state.io = makeObserver(docWin());
   var bar = backdrop.querySelector(".gifpicker-cats");
   if (bar) bar.querySelectorAll(".gifpicker-cat").forEach(function (x) { x.classList.remove("active"); });
   fetchPage();
+}
+
+function docWin() {
+  return document.querySelector(".gifpicker-win");
 }
 
 function buildSearch() {
@@ -192,6 +232,7 @@ export function openGifPicker(ta) {
 
   var grid = buildGrid();
   state = { ta: ta, q: null, offset: 0, done: false, loading: false, stamp: 0 };
+  state.io = makeObserver(win);
 
   var volver = document.createElement("button");
   volver.type = "button";
