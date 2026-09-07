@@ -13,6 +13,7 @@ import { closeSettings, isSettingsOpen } from "./ui/settings.js";
 import { acHide, isAcOpen } from "./utils/autocomplete.js";
 import { closeGifPicker, isGifPickerOpen } from "./ui/gifpicker.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
+import { setCollabsLoaded } from "./store/collabs.js";
 import {
   closeNotifications, isNotifOpen, refreshNotifBadge,
   closeSaved, isSavedOpen, syncFollowedNotifications, scanReplyNotifications
@@ -172,6 +173,10 @@ warmNostr();
    se purgan los posts guardados y se re-renderiza la vista actual */
 setBansRefresh(render);
 ensureBanInit();
+
+/* cuando llegan los perfiles (avatar/nombre) de los colaboradores aprobados
+   por el admin, se re-renderiza el sidebar para mostrarlos */
+setCollabsLoaded(render);
 
 renderNav();
 refreshChip();

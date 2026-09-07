@@ -6,10 +6,18 @@ export var STORAGE_KEY = "forchan_data_v1";
 export var GIPHY_KEY = "TUPHKPnj37i4cDV0aACuWKdcaxYQQSzY";
 
 /* moderacion: npub del admin (debe coincidir con la de Admin_forum/js/config.js).
-   Solo los eventos de baneo (kind 39000) firmados por esta clave se aplican.
-   BANNED_NPUBS = lista base de respaldo (se suma a la publicada por el panel). */
-export var ADMIN_NPUB = "";
+   Solo los eventos de roles (kind 39001) y baneo (kind 39000) firmados por esta
+   clave se aplican. BANNED_NPUBS = lista base de respaldo.
+   ADMIN_NPUB coincide con la del panel: se usa para confiar en los eventos
+   publicados por el admin y mostrarlo como colaborador/admin en el sidebar. */
+export var ADMIN_NPUB = "npub12us3dz6l88e9v3j6qhcpru9wp0jh2tk02zrd2uqcvkyezf257jrq2cyel2";
 export var BANNED_NPUBS = [];
+
+/* kinds del contrato con Admin_forum (ver CONTROL_PANEL.md en esa repo) */
+export var REG_KIND = 13370;   /* registro de usuario */
+export var REG_DTAG = "forosraiz-user-v1";
+export var ROLE_KIND = 39001;  /* roles y baneos del admin */
+export var ROLE_DTAG = "forosraiz-roles-v1";
 
 export var CATEGORIES = [
   "General",

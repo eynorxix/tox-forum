@@ -1,34 +1,75 @@
-/* ===== moderacion: consumo de la lista de baneados publicada por el admin =====
-   El panel de control (repo Admin_forum/) publica la lista de baneados como
-   un evento kind 39000, #d 'forosraiz-banlist-v1', FIRMADO por ADMIN_NPUB.
+/* ===== moderacion: consumo de roles y baneos publicados por el admin =====
+   El panel de control (repo Admin_forum/) publica el estado de cada usuario
+   (rol + status) como un evento kind 39001, #d 'forosraiz-roles-v1',
+   FIRMADO por ADMIN_NPUB. Tambien puede publicar la lista antigua de baneos
+   (kind 39000 'forosraiz-banlist-v1').
    Este modulo:
-   - combina 3 fuentes: BANNED_NPUBS (config), overrides locales y el evento
-     publicado por el admin (con suscripcion en vivo),
-   - expone isBanned(pubHex) para que la UI y el merge oculten a los baneados,
+   - combina 3 fuentes: BANNED_NPUBS (config), overrides locales y los eventos
+     publicados por el admin (suscripcion en vivo),
+   - expone isBanned(pubHex), getRole(pubHex), isCollabByAdmin(pubHex),
+     isAdmin(pubHex) y collabsByAdmin() para que la UI filtre y muestre,
    - purga del estado local los posts ya guardados de autores baneados. */
-import { ADMIN_NPUB, BANNED_NPUBS } from "../config.js";
+import { ADMIN_NPUB, BANNED_NPUBS, ROLE_KIND, ROLE_DTAG, BAN_KIND, BAN_DTAG } from "../config.js";
 import { getNip19 } from "../utils/nostr-lib.js";
 import { queryEvents, subscribeKindEvents } from "../utils/relays.js";
 import { state, save } from "./db.js";
 
-export var BAN_KIND = 39000;
-export var BAN_DTAG = "forosraiz-banlist-v1";
-var LOCAL_KEY = "forosraiz_bans";
+export { BAN_KIND, BAN_DTAG, ROLE_KIND, ROLE_DTAG };
+var LOCAL_KEY = "forosraiz_roles";
 
-var baseSet = {};  /* hex de config BANNED_NPUBS + overrides locales */
-var pubSet = {};   /* hex del ultimo evento publicado por el admin */
+var baseSet = {};   /* hex de config BANNED_NPUBS + overrides locales (baneados) */
+var pubSet = {};    /* hex baneados segun el ultimo evento publicado por el admin */
+var rolesMap = {};  /* hex -> { role, status } segun el ultimo evento 39001 */
 var lastPubTs = 0;
+var lastRoleTs = 0;
 
 var onBans = null;
 export function setBansRefresh(cb) { onBans = cb; }
 function notify() { if (onBans) onBans(); }
 
 export function isBanned(pubHex) {
-  return !!(pubHex && (baseSet[pubHex] || pubSet[pubHex]));
+  if (!pubHex) return false;
+  if (baseSet[pubHex] || pubSet[pubHex]) return true;
+  var r = rolesMap[pubHex];
+  return !!(r && r.status === "banned");
 }
 
+/* roles desde el evento 39001 */
+export function getRole(pubHex) {
+  var r = rolesMap[pubHex];
+  return r ? r.role : null;
+}
+export function isCollabByAdmin(pubHex) {
+  return getRole(pubHex) === "collab";
+}
+export function isAdmin(pubHex) {
+  return getRole(pubHex) === "admin";
+}
+/* todos los colaboradores aprobados por el admin (role collab, no baneados).
+   Devuelve array de { role, status } con pubkeys. */
+export function collabsByAdmin() {
+  return Object.keys(rolesMap).filter(function (hex) {
+    var r = rolesMap[hex];
+    return r && r.role === "collab" && r.status !== "banned";
+  });
+}
+export function adminsByAdmin() {
+  return Object.keys(rolesMap).filter(function (hex) {
+    var r = rolesMap[hex];
+    return r && r.role === "admin" && r.status !== "banned";
+  });
+}
+export function allRoles() { return rolesMap; }
+
 export function bannedPubkeys() {
-  return Object.keys(baseSet).concat(Object.keys(pubSet));
+  var out = [];
+  var seen = {};
+  [Object.keys(baseSet), Object.keys(pubSet), Object.keys(rolesMap)].forEach(function (arr) {
+    arr.forEach(function (hex) {
+      if (!seen[hex] && isBanned(hex)) { seen[hex] = true; out.push(hex); }
+    });
+  });
+  return out;
 }
 
 /* quita del estado local los posts de autores baneados (threads y respuestas).
@@ -54,7 +95,7 @@ export function pruneBanned() {
   return changed;
 }
 
-/* aplica el evento de baneo si es el mas reciente publicado por el admin */
+/* aplica el evento de baneo legacy (39000) si es el mas reciente */
 function applyBanEvent(ev) {
   if (ev.kind !== BAN_KIND) return;
   if ((ev.created_at || 0) <= lastPubTs) return;
@@ -62,6 +103,21 @@ function applyBanEvent(ev) {
   pubSet = {};
   (ev.tags || []).forEach(function (t) {
     if (t[0] === "p" && t[1] && /^[0-9a-f]{64}$/.test(t[1])) pubSet[t[1]] = true;
+  });
+  pruneBanned();
+  notify();
+}
+
+/* aplica el evento de roles (39001) si es el mas reciente */
+function applyRoleEvent(ev) {
+  if (ev.kind !== ROLE_KIND) return;
+  if ((ev.created_at || 0) <= lastRoleTs) return;
+  lastRoleTs = ev.created_at || 0;
+  rolesMap = {};
+  (ev.tags || []).forEach(function (t) {
+    if (t[0] === "p" && t[1] && /^[0-9a-f]{64}$/.test(t[1])) {
+      rolesMap[t[1]] = { role: t[2] || "comun", status: t[4] || "activo" };
+    }
   });
   pruneBanned();
   notify();
@@ -76,14 +132,18 @@ function decodeNpubToHex(np) {
 
 function loadLocalOverrides() {
   try {
-    JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]").forEach(function (hex) {
-      if (/^[0-9a-f]{64}$/.test(hex)) baseSet[hex] = true;
+    var map = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+    Object.keys(map).forEach(function (hex) {
+      if (/^[0-9a-f]{64}$/.test(hex)) {
+        var r = map[hex];
+        if (r && r.status === "banned") baseSet[hex] = true;
+      }
     });
   } catch (e) {}
 }
 
-/* arranca la moderacion: bases + evento publicado + suscripcion en vivo.
-   Idempotente; se llama una vez al cargar el sitio. */
+/* arranca la moderacion: bases + eventos publicados del admin + suscripcion
+   en vivo. Idempotente; se llama una vez al cargar el sitio. */
 var _init = null;
 export function ensureBanInit() {
   if (_init) return _init;
@@ -103,13 +163,28 @@ export function ensureBanInit() {
     }
     if (adminHex) {
       try {
-        var events = await queryEvents({ kinds: [BAN_KIND], authors: [adminHex], "#d": [BAN_DTAG], limit: 10 }, { maxWait: 7000 });
-        var newest = null;
-        events.forEach(function (ev) {
+        var roleEvents = await queryEvents({ kinds: [ROLE_KIND], authors: [adminHex], "#d": [ROLE_DTAG], limit: 10 }, { maxWait: 7000 });
+        var newestRole = null;
+        roleEvents.forEach(function (ev) {
           if (ev.pubkey !== adminHex) return;
-          if (!newest || ev.created_at > newest.created_at) newest = ev;
+          if (!newestRole || ev.created_at > newestRole.created_at) newestRole = ev;
         });
-        if (newest) applyBanEvent(newest);
+        if (newestRole) applyRoleEvent(newestRole);
+      } catch (e) {}
+      try {
+        var banEvents = await queryEvents({ kinds: [BAN_KIND], authors: [adminHex], "#d": [BAN_DTAG], limit: 10 }, { maxWait: 7000 });
+        var newestBan = null;
+        banEvents.forEach(function (ev) {
+          if (ev.pubkey !== adminHex) return;
+          if (!newestBan || ev.created_at > newestBan.created_at) newestBan = ev;
+        });
+        if (newestBan) applyBanEvent(newestBan);
+      } catch (e) {}
+      try {
+        subscribeKindEvents({ kinds: [ROLE_KIND], authors: [adminHex], "#d": [ROLE_DTAG] }, function (ev) {
+          if (!ev || ev.pubkey !== adminHex) return;
+          applyRoleEvent(ev);
+        }).catch(function () {});
       } catch (e) {}
       try {
         subscribeKindEvents({ kinds: [BAN_KIND], authors: [adminHex], "#d": [BAN_DTAG] }, function (ev) {

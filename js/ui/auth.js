@@ -1,7 +1,7 @@
 /* ===== autenticacion: registro y login de usuarios (modales) ===== */
 import { registerUser, login, logout } from "../store/db.js";
 import { generateKeys } from "../utils/nostr.js";
-import { publishProfile } from "../utils/relays.js";
+import { publishProfile, publishRegistration } from "../utils/relays.js";
 import { openMine, refresh, navTo } from "./appshell.js";
 import { refreshChip } from "./nav.js";
 import { syncMyPosts } from "../utils/relay-sync.js";
@@ -157,6 +157,11 @@ function buildRegister() {
     generateKeys().then(function (keys) {
       var user = registerUser(name.value.trim(), keys, parseInt(age.value, 10));
       publishProfile({ name: user.name, picture: null });
+      publishRegistration({
+        name: user.name, npub: user.npub, pubHex: user.pubHex,
+        icon: user.icon, mainForum: user.mainForum, forums: user.forums,
+        desc: user.desc
+      });
       status.textContent = "";
       showKeysModal(user.nsec, keys.npub);
     }).catch(function () {
@@ -309,6 +314,7 @@ function buildLogin() {
     login(nsec.value.trim()).then(function (ok) {
       btn.disabled = false;
       if (ok) {
+        publishRegistrationFromCurrent();
         var finish = function () {
           backdrop.remove();
           backdrop = null;
@@ -332,6 +338,21 @@ export function closeAuth() {
   if (!backdrop) return;
   backdrop.remove();
   backdrop = null;
+}
+
+/* publica/actualiza el evento de registro (kind 13370) con la identidad actual.
+   Se llama tras login y tras editar el perfil para que el panel del admin
+   siempre vea el nombre/avatar mas reciente. */
+export function publishRegistrationFromCurrent() {
+  import("../store/db.js").then(function (db) {
+    var me = db.getMe();
+    if (!me) return;
+    publishRegistration({
+      name: me.name, npub: me.npub, pubHex: me.pubHex,
+      icon: me.icon, mainForum: me.mainForum, forums: me.forums,
+      desc: me.desc
+    });
+  }).catch(function () {});
 }
 
 export { TERMS };

@@ -1,7 +1,8 @@
-/* ===== panel lateral: lista de colaboradores (mi perfil solo en el foro principal) ===== */
-import { getMe, isAnon, isCollab, myMainForum } from "../store/db.js";
+/* ===== panel lateral: lista de colaboradores (admin aprobados + mi perfil) ===== */
+import { getMe, isAnon, isCollab, postsByAuthor } from "../store/db.js";
 import { getCollabs } from "../store/collabs.js";
 import { openProfile, openMine } from "./appshell.js";
+import { isBanned, isAdmin as isAdminRole, isCollabByAdmin } from "../store/moderation.js";
 
 export function renderSidebar(boardId) {
   var collabs = getCollabs(boardId);
@@ -9,14 +10,21 @@ export function renderSidebar(boardId) {
   var inMain = !isAnon() && isCollab(boardId);
   var aside = document.createElement("aside");
   aside.className = "sidebar";
+
+  var collabsHere = collabs.filter(function (c) {
+    return !isBanned(c.pubHex);
+  });
+
   var h = document.createElement("h3");
-  h.innerHTML = 'Colaboradores <span class="collab-count">(' + (collabs.length + (inMain ? 1 : 0)) + ')</span>';
+  h.innerHTML = 'Colaboradores <span class="collab-count">(' + (collabsHere.length + (inMain ? 1 : 0)) + ')</span>';
   var clip = document.createElement("div");
   clip.className = "collab-list";
 
   if (inMain) {
     var myItem = document.createElement("div");
     myItem.className = "collab-item";
+    if (isAdminRole(me.pubHex)) myItem.classList.add("collab-admin");
+    else if (isCollabByAdmin(me.pubHex)) myItem.classList.add("collab-collab");
     if (me.icon) {
       var myImg = document.createElement("img");
       myImg.src = me.icon;
@@ -32,13 +40,26 @@ export function renderSidebar(boardId) {
     myNm.className = "collab-name";
     myNm.textContent = me.name;
     myItem.appendChild(myNm);
+    if (isAdminRole(me.pubHex)) {
+      var aTag = document.createElement("span");
+      aTag.className = "collab-tag";
+      aTag.textContent = "Admin";
+      myItem.appendChild(aTag);
+    } else if (isCollabByAdmin(me.pubHex)) {
+      var cTag = document.createElement("span");
+      cTag.className = "collab-tag";
+      cTag.textContent = "Colab";
+      myItem.appendChild(cTag);
+    }
     myItem.addEventListener("click", function () { openMine(); });
     clip.appendChild(myItem);
   }
 
-  collabs.forEach(function (u) {
+  collabsHere.forEach(function (u) {
     var item = document.createElement("div");
     item.className = "collab-item";
+    if (isAdminRole(u.pubHex)) item.classList.add("collab-admin");
+    else if (isCollabByAdmin(u.pubHex)) item.classList.add("collab-collab");
     var ic;
     if (u.icon) {
       ic = document.createElement("img");
@@ -55,7 +76,29 @@ export function renderSidebar(boardId) {
     nm.textContent = u.name;
     item.appendChild(ic);
     item.appendChild(nm);
-    item.addEventListener("click", function () { openProfile(boardId, u); });
+    if (isAdminRole(u.pubHex)) {
+      var aTag2 = document.createElement("span");
+      aTag2.className = "collab-tag";
+      aTag2.textContent = "Admin";
+      item.appendChild(aTag2);
+    } else if (isCollabByAdmin(u.pubHex)) {
+      var cTag2 = document.createElement("span");
+      cTag2.className = "collab-tag";
+      cTag2.textContent = "Colab";
+      item.appendChild(cTag2);
+    }
+    item.addEventListener("click", function () {
+      var posts = postsByAuthor(u.pubHex);
+      var userObj = {
+        pubHex: u.pubHex,
+        name: u.name,
+        icon: u.icon || null,
+        desc: "Colaborador de ForosRaiz.",
+        posts: posts.map(function (x) { return x.post.comment; }),
+        socials: []
+      };
+      openProfile(boardId, userObj);
+    });
     clip.appendChild(item);
   });
   aside.appendChild(h);

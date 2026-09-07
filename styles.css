@@ -789,6 +789,29 @@ textarea::placeholder {
 }
 .collab-count { color: var(--muted); font-size: 13px; font-weight: normal; }
 
+/* badges de rol en el sidebar */
+.collab-item .collab-tag {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+.collab-item.collab-admin .collab-tag,
+.collab-item.collab-admin .collab-name {
+  color: var(--pink);
+}
+.collab-item.collab-admin .collab-tag {
+  border: 1px solid var(--pink);
+}
+.collab-item.collab-collab .collab-tag {
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+
 .main { flex: 0 1 900px; min-width: 0; }
 
 /* ===== panel derecho (perfil personal) ===== */

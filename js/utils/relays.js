@@ -17,6 +17,7 @@
    La UI (boards 4chan) NO cambia; solo cambia como se guarda/lee el historial. */
 import { loadNostrLib } from "./nostr-lib.js";
 import { getActiveSec } from "./nostr.js";
+import { REG_KIND, REG_DTAG } from "../config.js";
 
 export const RELAYS = [
   "wss://relay.damus.io",
@@ -117,6 +118,28 @@ export function publishProfile(input) {
     about: "Perfil de ForosRaiz"
   });
   return pubWithRetry({ kind: 0, created_at: now, tags: [], content: content });
+}
+
+/* publica el registro de usuario (kind 13370, addressable por usuario).
+   input: { name, npub, pubHex, icon, mainForum, forums, desc }.
+   Lo lee el panel de control (Admin_forum) para saber quien se registro. */
+export function publishRegistration(input) {
+  var now = Math.floor(Date.now() / 1000);
+  var tags = [
+    ["d", REG_DTAG],
+    ["t", "forosraiz"],
+    ["npub", input.npub || ""]
+  ];
+  var content = JSON.stringify({
+    v: 1,
+    name: input.name || "",
+    icon: input.icon || null,
+    desc: input.desc || null,
+    mainForum: input.mainForum || null,
+    forums: input.forums || [],
+    updated_at: now
+  });
+  return pubWithRetry({ kind: REG_KIND, created_at: now, tags: tags, content: content });
 }
 
 /* ---------- consultas (lectura de vuelta) ---------- */
@@ -322,25 +345,44 @@ export function subscribeKindEvents(filter, onEvent) {
 
 /* nombres (kind 0) para una lista de pubkeys. Devuelve Promise<map pubkey->name>. */
 export function fetchNames(pubkeys) {
-  var keys = pubkeys || [];
+  return fetchProfiles(pubkeys).then(function (map) {
+    var names = {};
+    Object.keys(map).forEach(function (hex) { names[hex] = map[hex].name; });
+    return names;
+  });
+}
+
+/* perfiles (kind 0) para una lista de pubkeys.
+   Devuelve Promise<map pubkey->{name, picture}>. */
+export function fetchProfiles(pubkeys) {
+  var keys = (pubkeys || []).filter(function (k) { return k; });
   if (!keys.length) return Promise.resolve({});
-  return queryEvents({ kinds: [0], authors: keys, limit: keys.length * 2 }, { maxWait: 5000 })
+  var unique = [];
+  keys.forEach(function (k) { if (unique.indexOf(k) < 0) unique.push(k); });
+  return queryEvents({ kinds: [0], authors: unique, limit: unique.length * 2 }, { maxWait: 5000 })
     .then(function (events) {
       var newest = {};
-      var names = {};
+      var out = {};
+      unique.forEach(function (hex) { out[hex] = { name: hex.slice(0, 8), picture: null }; });
       events.forEach(function (ev) {
         var created = ev.created_at || 0;
         if (newest[ev.pubkey] !== undefined && created < newest[ev.pubkey]) return;
         newest[ev.pubkey] = created;
-        names[ev.pubkey] = ev.pubkey.slice(0, 8);
+        var entry = out[ev.pubkey] || { name: ev.pubkey.slice(0, 8), picture: null };
         try {
           var data = (typeof ev.content === "string") ? JSON.parse(ev.content) : null;
-          if (data && (data.display_name || data.name)) {
-            names[ev.pubkey] = data.display_name || data.name;
+          if (data) {
+            if (data.display_name || data.name) entry.name = data.display_name || data.name;
+            if (data.picture) entry.picture = data.picture;
           }
         } catch (e) { /* usa pubkey corto */ }
+        out[ev.pubkey] = entry;
       });
-      return names;
+      return out;
     })
-    .catch(function () { return {}; });
+    .catch(function () {
+      var out = {};
+      unique.forEach(function (hex) { out[hex] = { name: hex.slice(0, 8), picture: null }; });
+      return out;
+    });
 }

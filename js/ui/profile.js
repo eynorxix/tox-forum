@@ -41,7 +41,7 @@ export function renderProfile(boardId, user) {
     h0.textContent = user.name + " (baneado)";
     var sub0 = document.createElement("p");
     sub0.className = "collab-count";
-    sub0.textContent = "Este usuario ha sido baneado por el moderador del sitio.";
+    sub0.textContent = "Este usuario ha sido baneado por el administrador.";
     info0.appendChild(h0);
     info0.appendChild(sub0);
     banHead.appendChild(icon0);
@@ -49,7 +49,7 @@ export function renderProfile(boardId, user) {
     wrap.appendChild(banHead);
     var notice0 = document.createElement("div");
     notice0.className = "notice";
-    notice0.textContent = "Sus publicaciones estan ocultas y ya no apareceran en los foros, feeds ni notificaciones.";
+    notice0.textContent = "Sus publicaciones estan ocultas. Sera activado cuando el administrador lo permita.";
     wrap.appendChild(notice0);
     return wrap;
   }
@@ -207,7 +207,7 @@ export function renderMyProfile() {
   if (isBanned(me.pubHex)) {
     var banMine = document.createElement("div");
     banMine.className = "notice";
-    banMine.textContent = "Tu cuenta ha sido baneada por el moderador: tus publicaciones estan ocultas para los demas.";
+    banMine.textContent = "Tu cuenta ha sido baneada por el administrador: tus publicaciones estan ocultas. Sera activada cuando el administrador lo permita.";
     wrap.appendChild(banMine);
   }
 

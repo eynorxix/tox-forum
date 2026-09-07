@@ -1,6 +1,6 @@
 /* ===== tablero: listado de hilos, posteo y respuestas ===== */
 import { BOARDS } from "../config.js";
-import { getBoard, nextNo, save, isAnon, meName, getMe, purgeExpired, canPostBoard } from "../store/db.js";
+import { getBoard, nextNo, save, isAnon, meName, getMe, purgeExpired, canPostBoard, forumOwnerPub, isCreatedForum } from "../store/db.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
@@ -143,7 +143,14 @@ export function renderBoard(id) {
 
   if (id === "d") wrap.appendChild(makeUniverseViewer());
 
-  wrap.appendChild(makePostForm(id));
+  /* si el creador del foro esta baneado, todo el foro queda bloqueado */
+  var blockedForum = false;
+  if (isCreatedForum(id)) {
+    var owner = forumOwnerPub(id);
+    if (owner && isBanned(owner)) blockedForum = true;
+  }
+
+  wrap.appendChild(makePostForm(id, blockedForum));
 
   /* autores baneados: no se muestran (moderacion del admin) */
   var visible = threads.filter(function (th) {
@@ -164,10 +171,19 @@ export function renderBoard(id) {
   return wrap;
 }
 
-function makePostForm(boardId) {
+function makePostForm(boardId, blockedForum) {
   var anon = isAnon();
   var form = document.createElement("form");
   form.className = "post-form";
+
+  /* si el creador del foro fue baneado, nadie puede publicar aquí */
+  if (blockedForum) {
+    var blk = document.createElement("p");
+    blk.className = "notice";
+    blk.textContent = "Este foro ha sido bloqueado porque su creador fue baneado por el administrador. Nadie puede publicar aqui.";
+    form.appendChild(blk);
+    return form;
+  }
 
   /* para publicar hay que estar registrado/logueado: los anonimos solo leen. */
   if (anon) {
@@ -175,6 +191,16 @@ function makePostForm(boardId) {
     blocked.className = "notice";
     blocked.innerHTML = 'Para publicar reg&iacute;strate o inicia sesi&oacute;n. <a href="#" id="reg-link">Crear cuenta / entrar</a>.';
     form.appendChild(blocked);
+    return form;
+  }
+
+  /* un usuario baneado no puede publicar */
+  var meBanned = getMe() && isBanned(getMe().pubHex);
+  if (meBanned) {
+    var bd = document.createElement("p");
+    bd.className = "notice";
+    bd.textContent = "Tu cuenta ha sido baneada por el administrador. Sera activada cuando el administrador lo permita, hasta entonces no puedes publicar.";
+    form.appendChild(bd);
     return form;
   }
 
@@ -236,6 +262,11 @@ function makePostForm(boardId) {
     ev.preventDefault();
     if (!canPostBoard(boardId)) {
       toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
+    var meForPost = getMe();
+    if (meForPost && isBanned(meForPost.pubHex)) {
+      toast("Tu cuenta esta baneada: no puedes publicar.", "err");
       return;
     }
     var comment = form.elements.comment.value.trim();
@@ -357,7 +388,7 @@ function renderThread(boardId, thread) {
     replyNodes.forEach(function (n) { replies.appendChild(n); });
   }
 
-  var rf = makeReplyForm(boardId, thread);
+  var rf = makeReplyForm(boardId, thread, blockedForum);
   replies.appendChild(rf);
   if (moreBtn) replies.insertBefore(moreBtn, rf);
   wrap.appendChild(replies);
@@ -419,11 +450,19 @@ function renderReply(boardId, thread, reply) {
   return div;
 }
 
-function makeReplyForm(boardId, thread) {
+function makeReplyForm(boardId, thread, blockedForum) {
   var anon = isAnon();
   var form = document.createElement("form");
   form.className = "reply-form";
   form.style.display = "none";
+
+  if (blockedForum) {
+    var blk2 = document.createElement("p");
+    blk2.className = "notice";
+    blk2.textContent = "Este foro esta bloqueado: su creador fue baneado por el administrador.";
+    form.appendChild(blk2);
+    return form;
+  }
 
   /* para responder hay que estar registrado/logueado: los anonimos solo leen. */
   if (anon) {
@@ -431,6 +470,15 @@ function makeReplyForm(boardId, thread) {
     blocked.className = "notice";
     blocked.innerHTML = 'Para responder reg&iacute;strate o inicia sesi&oacute;n. <a href="#" id="reg-link">Crear cuenta / entrar</a>.';
     form.appendChild(blocked);
+    return form;
+  }
+
+  var meBanned = getMe() && isBanned(getMe().pubHex);
+  if (meBanned) {
+    var bd2 = document.createElement("p");
+    bd2.className = "notice";
+    bd2.textContent = "Tu cuenta ha sido baneada por el administrador. Sera activada cuando el administrador lo permita, hasta entonces no puedes responder.";
+    form.appendChild(bd2);
     return form;
   }
 
@@ -473,6 +521,11 @@ function makeReplyForm(boardId, thread) {
     ev.preventDefault();
     if (!canPostBoard(boardId)) {
       toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
+    var meForReply = getMe();
+    if (meForReply && isBanned(meForReply.pubHex)) {
+      toast("Tu cuenta esta baneada: no puedes responder.", "err");
       return;
     }
     var comment = ta.value.trim();
