@@ -115,12 +115,20 @@ function applyRoleEvent(ev) {
   lastRoleTs = ev.created_at || 0;
   rolesMap = {};
   (ev.tags || []).forEach(function (t) {
-    if (t[0] === "p" && t[1] && /^[0-9a-f]{64}$/.test(t[1])) {
-      rolesMap[t[1]] = { role: t[2] || "comun", status: t[4] || "activo" };
-    }
+    if (t[0] !== "p" || !t[1] || !/^[0-9a-f]{64}$/.test(t[1])) return;
+    /* formato: ["p", hex, "role", <rol>, "status", <estado>] */
+    rolesMap[t[1]] = { role: tagVal(t, "role") || "comun", status: tagVal(t, "status") || "activo" };
   });
   pruneBanned();
   notify();
+}
+
+/* extrae el valor de una etiqueta con su valor (p. ej. "role", "collab") */
+function tagVal(tag, label) {
+  for (var i = 2; i < tag.length - 1; i++) {
+    if (tag[i] === label && tag[i + 1]) return tag[i + 1];
+  }
+  return null;
 }
 
 function decodeNpubToHex(np) {
