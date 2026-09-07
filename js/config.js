@@ -10,7 +10,7 @@ export var GIPHY_KEY = "TUPHKPnj37i4cDV0aACuWKdcaxYQQSzY";
    clave se aplican. BANNED_NPUBS = lista base de respaldo.
    ADMIN_NPUB coincide con la del panel: se usa para confiar en los eventos
    publicados por el admin y mostrarlo como colaborador/admin en el sidebar. */
-export var ADMIN_NPUB = "npub12us3dz6l88e9v3j6qhcpru9wp0jh2tk02zrd2uqcvkyezf257jrq2cyel2";
+export var ADMIN_NPUB = "npub1ehuggfkcre09tw8xcvkvg8mq69569a4fxyapxfcdtm6zq5pnnlrqzpw33z";
 export var BANNED_NPUBS = [];
 
 /* kinds del contrato con Admin_forum (ver CONTROL_PANEL.md en esa repo) */
