@@ -214,7 +214,7 @@ export function openSettings() {
   nameIn.placeholder = "Nombre de tu nuevo foro...";
   var createBtn = document.createElement("button");
   createBtn.type = "button";
-  createBtn.className = "btn2";
+  createBtn.className = "btn2 create-forum-btn";
   createBtn.textContent = "Crear foro";
   createBtn.addEventListener("click", function () {
     if (!getMe()) {

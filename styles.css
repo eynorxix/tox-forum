@@ -1807,6 +1807,20 @@ textarea::placeholder {
   color: var(--text);
   font-size: 14px;
   font-family: inherit;
+  caret-color: var(--accent);
+}
+.settings-input::placeholder {
+  color: var(--comment);
+  opacity: 1;
+}
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.settings-input[type="text"],
+.settings-input[name="forum"] {
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
 }
 .settings-panel .fo-search { width: 100%; margin-bottom: 10px; }
 .settings-panel .fo-grid-wrap { max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
@@ -1819,8 +1833,15 @@ textarea::placeholder {
   display: flex;
   gap: 8px;
   margin: 0 0 14px;
+  align-items: center;
 }
-.settings-create-forum .settings-input { flex: 1; }
+.settings-create-forum .settings-input { flex: 1; min-width: 0; }
+.settings-create-forum .create-forum-btn,
+.created-edit .btn2 {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .created-forums { margin-top: 6px; }
 .created-list { display: flex; flex-direction: column; gap: 12px; }
 .created-item {
