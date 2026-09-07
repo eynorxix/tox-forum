@@ -158,7 +158,7 @@ export function renderBoard(id) {
   });
 
   visible.slice().reverse().forEach(function (thread) {
-    wrap.appendChild(renderThread(id, thread));
+    wrap.appendChild(renderThread(id, thread, blockedForum));
   });
 
   var foot = document.createElement("div");
@@ -317,7 +317,7 @@ function makePostForm(boardId, blockedForum) {
 }
 
 /* ---- hilo individual ---- */
-function renderThread(boardId, thread) {
+function renderThread(boardId, thread, blockedForum) {
   var wrap = document.createElement("div");
   wrap.className = "thread";
   wrap.id = "thread-" + thread.no;
