@@ -11,6 +11,7 @@ import { closeForos, isForosOpen } from "./ui/foros.js";
 import { closeAuth, isAuthOpen } from "./ui/auth.js";
 import { closeSettings, isSettingsOpen } from "./ui/settings.js";
 import { acHide, isAcOpen } from "./utils/autocomplete.js";
+import { closeGifPicker, isGifPickerOpen } from "./ui/gifpicker.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
 import {
   closeNotifications, isNotifOpen, refreshNotifBadge,
@@ -22,7 +23,9 @@ setHooks({ navTo: go, refresh: render, openProfile: showProfile, openMine: showM
 
 document.addEventListener("keydown", function (ev) {
   if (ev.key === "Escape") {
-    if (document.querySelector(".img-backdrop")) {
+    if (isGifPickerOpen()) {
+      closeGifPicker();
+    } else if (document.querySelector(".img-backdrop")) {
       closeImage();
     } else if (isSettingsOpen()) {
       closeSettings();

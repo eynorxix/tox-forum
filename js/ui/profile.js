@@ -14,6 +14,7 @@ import { openImage } from "./lightbox.js";
 import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
+import { openGifPicker } from "./gifpicker.js";
 import { isBanned } from "../store/moderation.js";
 
 export function renderProfile(boardId, user) {
@@ -224,6 +225,15 @@ export function renderMyProfile() {
   qImg.accept = "image/*";
   var qAct = document.createElement("div");
   qAct.className = "form-actions";
+  var qGif = document.createElement("button");
+  qGif.type = "button";
+  qGif.className = "gif-btn";
+  qGif.textContent = "Gifs";
+  qGif.title = "Buscar y agregar GIFs como stickers";
+  qGif.addEventListener("click", function () {
+    openGifPicker(qTa);
+  });
+  qAct.appendChild(qGif);
   var qBtn = document.createElement("button");
   qBtn.type = "button";
   qBtn.textContent = "Publicar desde mi perfil";

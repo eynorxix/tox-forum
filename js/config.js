@@ -2,6 +2,9 @@
 
 export var STORAGE_KEY = "forchan_data_v1";
 
+/* API Key de GIPHY para el selector de GIFs/stickers al postear */
+export var GIPHY_KEY = "TUPHKPnj37i4cDV0aACuWKdcaxYQQSzY";
+
 /* moderacion: npub del admin (debe coincidir con la de Admin_forum/js/config.js).
    Solo los eventos de baneo (kind 39000) firmados por esta clave se aplican.
    BANNED_NPUBS = lista base de respaldo (se suma a la publicada por el panel). */

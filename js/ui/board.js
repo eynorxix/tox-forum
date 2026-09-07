@@ -15,6 +15,7 @@ import { refresh } from "./appshell.js";
 import { likeButton } from "./activity.js";
 import { isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
+import { openGifPicker } from "./gifpicker.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -211,6 +212,15 @@ function makePostForm(boardId) {
   var tdAct = document.createElement("td");
   tdAct.colSpan = 2;
   tdAct.className = "form-actions";
+  var gBtn = document.createElement("button");
+  gBtn.type = "button";
+  gBtn.className = "gif-btn";
+  gBtn.textContent = "Gifs";
+  gBtn.title = "Buscar y agregar GIFs como stickers";
+  gBtn.addEventListener("click", function () {
+    openGifPicker(form.elements.comment);
+  });
+  tdAct.appendChild(gBtn);
   var btn = document.createElement("button");
   btn.type = "submit";
   btn.textContent = "Publicar hilo";
@@ -440,6 +450,15 @@ function makeReplyForm(boardId, thread) {
 
   var rAct = document.createElement("div");
   rAct.className = "row form-actions";
+  var gBtnR = document.createElement("button");
+  gBtnR.type = "button";
+  gBtnR.className = "gif-btn";
+  gBtnR.textContent = "Gifs";
+  gBtnR.title = "Buscar y agregar GIFs como stickers";
+  gBtnR.addEventListener("click", function () {
+    openGifPicker(ta);
+  });
+  rAct.appendChild(gBtnR);
   var btn = document.createElement("button");
   btn.type = "submit";
   btn.textContent = "Enviar respuesta";
