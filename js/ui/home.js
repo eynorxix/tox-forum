@@ -3,7 +3,7 @@
    de cada categoria, los boards repartidos en 4 columnas fijas (filas
    ilimitadas). Cada celda muestra solo "/tag/ - Nombre" sin descripcion. */
 import { BOARDS, CATEGORIES } from "../config.js";
-import { state, getBoard } from "../store/db.js";
+import { state, getBoard, getCreatedForums } from "../store/db.js";
 import { openProfile } from "./appshell.js";
 import { isBanned } from "../store/moderation.js";
 
@@ -144,6 +144,78 @@ export function renderHome() {
     section.appendChild(grid);
     wrap.appendChild(section);
   });
+
+  /* ---- Recomendaciones: debajo de los foros principales, misma lista que
+     "Foros Recomendados" del panel derecho (incluye foros creados por
+     usuarios) pero en grande con su propio buscador ---- */
+  var recom = document.createElement("section");
+  recom.className = "chan-cat chan-recom";
+  var recomTitle = document.createElement("h3");
+  recomTitle.className = "chan-cat-title";
+  recomTitle.textContent = "Recomendaciones";
+  recom.appendChild(recomTitle);
+
+  var items = [
+    { id: "or", name: "Origen y Misterio" },
+    { id: "gz", name: "Gamer Zone" },
+    { id: "ch", name: "Cocina en Casa" },
+    { id: "mo", name: "Moda Urbana" },
+    { id: "ca", name: "Cafe y Radar" },
+    { id: "mu", name: "Musica Independiente" },
+    { id: "de", name: "Diseño y Pixel" },
+    { id: "pa", name: "Paranormal" },
+    { id: "ci", name: "Ciencia y Futuro" },
+    { id: "an2", name: "Anime Retro" },
+    { id: "fo", name: "Fotografia" },
+    { id: "de2", name: "Deep Web y Ciber" },
+    { id: "re", name: "Relatos y Cuentos" },
+    { id: "mi", name: "Minerales y Rocas" },
+    { id: "ga", name: "Gatitos" },
+    { id: "ho", name: "Hogar y DIY" },
+    { id: "es", name: "Espiritualidad" },
+    { id: "na", name: "Naturaleza" }
+  ];
+  /* agrega los foros creados por los usuarios del navegador (misma fuente
+     que el panel derecho "Foros Recomendados") */
+  getCreatedForums().forEach(function (f) {
+    if (!items.some(function (r) { return r.id === f.id; })) {
+      items.push({ id: f.id, name: f.name });
+    }
+  });
+
+  /* buscador que filtra la grilla de recomendaciones */
+  var recomSearch = document.createElement("div");
+  recomSearch.className = "home-search recom-search";
+  var recomInput = document.createElement("input");
+  recomInput.type = "text";
+  recomInput.placeholder = "Buscar en Recomendaciones...";
+  recomSearch.appendChild(recomInput);
+  recom.appendChild(recomSearch);
+
+  var recomGrid = document.createElement("div");
+  recomGrid.className = "recom-grid";
+  function renderRecom(q) {
+    recomGrid.innerHTML = "";
+    var fq = (q || "").toLowerCase().trim();
+    items.forEach(function (b) {
+      if (fq && ("/" + b.id + "/ " + b.name).toLowerCase().indexOf(fq) < 0) return;
+      var a = document.createElement("a");
+      a.dataset.board = b.id;
+      a.title = b.name;
+      var bel = document.createElement("b");
+      bel.textContent = "/" + b.id + "/";
+      var span = document.createElement("span");
+      span.textContent = " " + b.name;
+      a.appendChild(bel);
+      a.appendChild(span);
+      recomGrid.appendChild(a);
+    });
+  }
+  recomInput.addEventListener("input", function () { renderRecom(recomInput.value); });
+  renderRecom("");
+  recom.appendChild(recomGrid);
+
+  wrap.appendChild(recom);
 
   return wrap;
 }
