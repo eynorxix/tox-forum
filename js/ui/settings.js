@@ -207,31 +207,46 @@ export function openSettings(startTab) {
 
   var redesInfo = document.createElement("p");
   redesInfo.className = "fo-info";
-  redesInfo.textContent = "Las redes que agregues aqui se mostraran en tu perfil (modulo /publico/) para que los demas usuarios puedan comunicarse contigo.";
+  redesInfo.textContent = "Aqui agregas tus redes sociales: cada red lleva un titulo (ej: GitHub, NOSTR, Twitter) y su enlace. Se muestran en tu perfil (modulo /publico/) para que los demas usuarios puedan comunicarse contigo.";
   pRedes.appendChild(redesInfo);
 
-  var redesList = document.createElement("div");
-  redesList.className = "redes-list";
-  pRedes.appendChild(redesList);
-
-  var redesAddRow = document.createElement("div");
-  redesAddRow.className = "settings-create-forum";
+  /* formulario de creacion: titulo + enlace + boton agregar */
+  var redesCreateRow = document.createElement("div");
+  redesCreateRow.className = "settings-create-forum";
   var redTitleIn = document.createElement("input");
   redTitleIn.type = "text";
   redTitleIn.className = "settings-input";
-  redTitleIn.placeholder = "Titulo de la red (ej: GitHub, NOSTR)...";
+  redTitleIn.placeholder = "Titulo...";
   var redUrlIn = document.createElement("input");
   redUrlIn.type = "text";
   redUrlIn.className = "settings-input";
-  redUrlIn.placeholder = "https://...";
+  redUrlIn.placeholder = "Enlace (https://)...";
   var redAddBtn = document.createElement("button");
   redAddBtn.type = "button";
-  redAddBtn.className = "btn2";
-  redAddBtn.textContent = "Agregar red";
-  redesAddRow.appendChild(redTitleIn);
-  redesAddRow.appendChild(redUrlIn);
-  redesAddRow.appendChild(redAddBtn);
-  pRedes.appendChild(redesAddRow);
+  redAddBtn.className = "btn2 create-forum-btn";
+  redAddBtn.textContent = "Agregar";
+  redAddBtn.addEventListener("click", function () {
+    var t = redTitleIn.value.trim();
+    var u = redUrlIn.value.trim();
+    if (!t || !/^https?:\/\//i.test(u)) {
+      toast("Escribe un titulo y un enlace valido (https://...)", "warn");
+      return;
+    }
+    setSocials(currentRedes().concat([{ label: t, url: u }]));
+    saveRedesArch();
+    redTitleIn.value = "";
+    redUrlIn.value = "";
+    renderRedesList();
+  });
+  redesCreateRow.appendChild(redTitleIn);
+  redesCreateRow.appendChild(redUrlIn);
+  redesCreateRow.appendChild(redAddBtn);
+  pRedes.appendChild(redesCreateRow);
+
+  /* lista de redes agregadas con edicion (igual que la lista de foros) */
+  var redesWrap = document.createElement("div");
+  redesWrap.className = "created-forums";
+  pRedes.appendChild(redesWrap);
 
   var redesAct = document.createElement("div");
   redesAct.className = "form-actions";
@@ -260,18 +275,21 @@ export function openSettings(startTab) {
   }
 
   function renderRedesList() {
-    redesList.innerHTML = "";
+    redesWrap.innerHTML = "";
     var list = mySocials();
     if (!list.length) {
-      var noneR = document.createElement("p");
-      noneR.className = "rp-text";
-      noneR.textContent = "Aun no has agregado redes.";
-      redesList.appendChild(noneR);
+      var noR = document.createElement("p");
+      noR.className = "rp-text";
+      noR.textContent = "Aun no has agregado ninguna red.";
+      redesWrap.appendChild(noR);
       return;
     }
+    var listEl = document.createElement("div");
+    listEl.className = "created-list";
     list.forEach(function (s, idx) {
       var item = document.createElement("div");
       item.className = "created-item";
+
       var head = document.createElement("div");
       head.className = "created-head";
       var tag = document.createElement("span");
@@ -283,33 +301,55 @@ export function openSettings(startTab) {
       nm.textContent = s.url;
       head.appendChild(nm);
       item.appendChild(head);
-      var del = document.createElement("button");
-      del.type = "button";
-      del.className = "btn2 danger";
-      del.textContent = "Quitar";
-      del.addEventListener("click", function () {
+
+      /* editar titulo y enlace */
+      var editRow = document.createElement("div");
+      editRow.className = "created-edit";
+      var editTitle = document.createElement("input");
+      editTitle.type = "text";
+      editTitle.className = "settings-input";
+      editTitle.value = s.label;
+      var editUrl = document.createElement("input");
+      editUrl.type = "text";
+      editUrl.className = "settings-input";
+      editUrl.value = s.url;
+      var saveRed = document.createElement("button");
+      saveRed.type = "button";
+      saveRed.className = "btn2";
+      saveRed.textContent = "Guardar";
+      saveRed.addEventListener("click", function () {
+        var t = editTitle.value.trim();
+        var u = editUrl.value.trim();
+        if (!t || !/^https?:\/\//i.test(u)) {
+          toast("Escribe un titulo y un enlace valido (https://...)", "warn");
+          return;
+        }
+        var arr = currentRedes();
+        arr[idx] = { label: t, url: u };
+        setSocials(arr);
+        saveRedesArch();
+      });
+      editRow.appendChild(editTitle);
+      editRow.appendChild(editUrl);
+      editRow.appendChild(saveRed);
+      item.appendChild(editRow);
+
+      /* quitar */
+      var delRed = document.createElement("button");
+      delRed.type = "button";
+      delRed.className = "btn2 danger";
+      delRed.textContent = "Quitar";
+      delRed.addEventListener("click", function () {
         setSocials(currentRedes().filter(function (_, i) { return i !== idx; }));
         saveRedesArch();
       });
-      item.appendChild(del);
-      redesList.appendChild(item);
+      item.appendChild(delRed);
+
+      listEl.appendChild(item);
     });
+    redesWrap.appendChild(listEl);
   }
   renderRedesList();
-
-  redAddBtn.addEventListener("click", function () {
-    var t = redTitleIn.value.trim();
-    var u = redUrlIn.value.trim();
-    if (!t || !/^https?:\/\//i.test(u)) {
-      toast("Escribe un titulo y una url valida (https://...)", "warn");
-      return;
-    }
-    setSocials(currentRedes().concat([{ label: t, url: u }]));
-    saveRedesArch();
-    redTitleIn.value = "";
-    redUrlIn.value = "";
-    renderRedesList();
-  });
 
   panels.redes = pRedes;
   win.appendChild(pRedes);

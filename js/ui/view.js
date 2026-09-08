@@ -138,10 +138,11 @@ export function showProfile(boardId, user) {
   if (user && user.pubHex) {
     import("../store/collabs.js").then(function (c) {
       c.fetchCollabProfile(user.pubHex).then(function (p) {
-        if (!p || (!p.desc && !(p.socials && p.socials.length))) return;
+        if (!p || (!p.desc && !p.picture && !(p.socials && p.socials.length))) return;
         var sent = session.profileView && session.profileView.user;
         if (!sent) return;
         sent.desc = p.desc || sent.desc || null;
+        sent.icon = p.picture || sent.icon || null;
         sent.socials = p.socials && p.socials.length ? p.socials : (sent.socials || []);
         render();
       });
