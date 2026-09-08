@@ -101,6 +101,78 @@ function publicoPanel(user) {
   return panel;
 }
 
+/* modal para compartir el perfil publico de un usuario (URL #perfil/<pubHex>) */
+function openShareProfile(pubHex) {
+  var url = location.origin + location.pathname + "#perfil/" + pubHex;
+  var box = document.createElement("div");
+  box.className = "share-backdrop";
+  var win = document.createElement("div");
+  win.className = "share-window";
+  var t = document.createElement("h3");
+  t.textContent = "Compartir perfil";
+  win.appendChild(t);
+  var p = document.createElement("p");
+  p.className = "share-info";
+  p.textContent = "Este enlace muestra el perfil publico del usuario: sus redes sociales, descripcion y foros creados. Puedes compartirlo donde quieras.";
+  win.appendChild(p);
+  var row = document.createElement("div");
+  row.className = "share-row";
+  var inp = document.createElement("input");
+  inp.type = "text";
+  inp.className = "settings-input";
+  inp.readOnly = true;
+  inp.value = url;
+  row.appendChild(inp);
+  var copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "btn2";
+  copyBtn.textContent = "Copiar";
+  copyBtn.addEventListener("click", function () {
+    inp.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        copyBtn.textContent = "Copiado";
+        setTimeout(function () { copyBtn.textContent = "Copiar"; }, 1500);
+      }).catch(function () { copyBtn.textContent = "Copiar"; });
+    } else {
+      copyBtn.textContent = "Copiado";
+      setTimeout(function () { copyBtn.textContent = "Copiar"; }, 1500);
+    }
+  });
+  row.appendChild(copyBtn);
+  win.appendChild(row);
+  var openBtn = document.createElement("button");
+  openBtn.type = "button";
+  openBtn.className = "btn2";
+  openBtn.textContent = "Abrir en otra pestana";
+  openBtn.addEventListener("click", function () {
+    window.open(url, "_blank", "noopener");
+  });
+  win.appendChild(openBtn);
+  var closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "btn2 share-close";
+  closeBtn.textContent = "Cerrar";
+  closeBtn.addEventListener("click", function () { box.remove(); });
+  win.appendChild(closeBtn);
+  box.appendChild(win);
+  box.addEventListener("click", function (ev) {
+    if (ev.target === box) box.remove();
+  });
+  document.body.appendChild(box);
+}
+
+/* boton "Compartir" del perfil: solo si el perfil tiene pubHex */
+function shareButton(pubHex) {
+  var b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn2 share-btn";
+  b.textContent = "Compartir";
+  b.title = "Compartir el enlace publico de este perfil";
+  b.addEventListener("click", function () { openShareProfile(pubHex); });
+  return b;
+}
+
 export function renderProfile(boardId, user) {
   var b = BOARDS.find(function (x) { return x.id === boardId; }) || { name: boardId };
   var wrap = document.createElement("div");
@@ -169,6 +241,7 @@ export function renderProfile(boardId, user) {
   if (user.pubHex && !isOwnPub) {
     followRow = document.createElement("div");
     followRow.className = "profile-follow";
+    if (user.pubHex) followRow.appendChild(shareButton(user.pubHex));
     var fbtn = document.createElement("button");
     fbtn.type = "button";
     fbtn.className = "btn2 follow-btn";
@@ -254,6 +327,7 @@ export function renderMyProfile() {
     openSettings();
   });
   backRow.appendChild(back);
+  if (me.pubHex) backRow.appendChild(shareButton(me.pubHex));
   backRow.appendChild(settingsBtn);
 
   var head = document.createElement("div");

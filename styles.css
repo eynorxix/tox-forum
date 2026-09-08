@@ -1860,6 +1860,36 @@ textarea::placeholder {
   padding: 20px;
   scrollbar-width: thin;
 }
+/* ===== modal de compartir perfil (#perfil/<pubHex>) ===== */
+.share-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.share-window {
+  position: relative;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 34px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 560px;
+  padding: 20px;
+}
+.share-window h3 { font-family: "Courier New", monospace; color: var(--accent); margin: 0 0 10px; }
+.share-info { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.share-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.share-row input[type="text"] { flex: 1; min-width: 0; }
+.share-window .btn2 { margin-bottom: 8px; }
+.share-window .share-close { border-color: var(--red, #d33); color: var(--red, #d33); }
+.share-window .share-close:hover { background: var(--red, #d33); color: #16161e; }
+.share-btn { border-color: var(--teal); color: var(--teal); }
+.share-btn:hover { background: var(--teal); color: #16161e; }
+
 .settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .settings-head h3 { font-family: "Courier New", monospace; color: var(--accent); margin: 0; }
 .settings-close {

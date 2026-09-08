@@ -138,16 +138,35 @@ export function showProfile(boardId, user) {
   if (user && user.pubHex) {
     import("../store/collabs.js").then(function (c) {
       c.fetchCollabProfile(user.pubHex).then(function (p) {
-        if (!p || (!p.desc && !p.picture && !(p.socials && p.socials.length))) return;
+        if (!p) return;
+        var hasName = p.name && p.name !== p.pubHex && p.name !== user.pubHex.slice(0, 8);
+        if (!p.desc && !p.picture && !(p.socials && p.socials.length) && !hasName) return;
         var sent = session.profileView && session.profileView.user;
         if (!sent) return;
-        sent.desc = p.desc || sent.desc || null;
-        sent.icon = p.picture || sent.icon || null;
-        sent.socials = p.socials && p.socials.length ? p.socials : (sent.socials || []);
+        if (hasName) sent.name = p.name;
+        if (p.desc) sent.desc = p.desc;
+        if (p.picture) sent.icon = p.picture;
+        if (p.socials && p.socials.length) sent.socials = p.socials;
         render();
       });
     }).catch(function () {});
   }
+}
+
+/* abre el perfil publico de un pubkey (usado por el URL compartible
+   /#perfil/<pubHex>). El board se toma del ultimo visitado o "d". */
+export function openProfileByPubHex(pubHex) {
+  var boardId = (session.profileView && session.profileView.boardId) ||
+    session.lastBoard || "d";
+  if (session.currentView !== "home") session.lastBoard = session.currentView;
+  showProfile(boardId, {
+    pubHex: pubHex,
+    name: pubHex.slice(0, 8),
+    icon: null,
+    desc: null,
+    posts: [],
+    socials: []
+  });
 }
 
 export function showMyProfile() {

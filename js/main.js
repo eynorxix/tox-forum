@@ -1,8 +1,8 @@
 /* ===== punto de entrada: arranque, eventos globales y semillas ===== */
-import { session } from "./store/session.js";
+import { session, parseProfileHash } from "./store/session.js";
 import { purgeExpired, myPosts } from "./store/db.js";
 import { setHooks } from "./ui/appshell.js";
-import { go, render, showProfile, showMyProfile } from "./ui/view.js";
+import { go, render, showProfile, showMyProfile, openProfileByPubHex } from "./ui/view.js";
 import { renderNav, refreshChip } from "./ui/nav.js";
 import { warmNostr } from "./utils/nostr-lib.js";
 import { syncBoard, isWatchingBoard, syncAllBoards } from "./utils/relay-sync.js";
@@ -198,6 +198,16 @@ renderNav();
 refreshChip();
 refreshNotifBadge();
 render();
+
+/* URL publico de perfil: #perfil/<pubHex> (por ejemplo al compartir tu perfil).
+   Si la pagina se abre con ese hash (o cambia de hash), se muestra el perfil
+   publico de ese usuario en vez de la vista por defecto. */
+function routeProfileHash() {
+  var hex = parseProfileHash(location.hash);
+  if (hex) openProfileByPubHex(hex);
+}
+window.addEventListener("hashchange", routeProfileHash);
+routeProfileHash();
 
 /* sincroniza todos los foros con los posts de Nostr al arrancar, para que un
    visitante nuevo vea el historial de todos los foros (no solo el abierto).
