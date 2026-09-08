@@ -1,7 +1,7 @@
 /* ===== capa de datos: estado persistente, identidad y acceso al almacen ===== */
 import { STORAGE_KEY, BOARDS } from "../config.js";
 import { importNsec, activateFromB64, clearActiveKeys } from "../utils/nostr.js";
-import { fetchNames, publishProfile, publishForum, fetchForums } from "../utils/relays.js";
+import { fetchNames, publishProfile, publishForum, fetchForums, publishContactList } from "../utils/relays.js";
 import { isBanned, isStaff } from "./moderation.js";
 
 export var state = load();
@@ -215,6 +215,7 @@ export function followUser(pubHex) {
   if (state.following.indexOf(pubHex) < 0) {
     state.following.push(pubHex);
     save();
+    publishContactList(state.following);
     return true;
   }
   return false;
@@ -225,6 +226,7 @@ export function unfollowUser(pubHex) {
   if (i >= 0) {
     state.following.splice(i, 1);
     save();
+    publishContactList(state.following);
     return true;
   }
   return false;

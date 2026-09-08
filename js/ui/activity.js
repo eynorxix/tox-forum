@@ -10,6 +10,7 @@ import {
 } from "../store/db.js";
 import { session } from "../store/session.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
+import { publishContactList } from "../utils/relays.js";
 import { openImage } from "./lightbox.js";
 import { openProfile, navTo } from "./appshell.js";
 import { isBanned } from "../store/moderation.js";
@@ -187,6 +188,7 @@ function follow(u) {
     save();
     addNotification("Empezaste a seguir a " + u.name + ".");
     markNotifsRead();
+    publishContactList(state.following);
   }
   syncFollowedNotifications();
 }
@@ -199,6 +201,7 @@ export function followByPubHex(pubHex, displayName) {
     save();
     addNotification("Empezaste a seguir a " + (displayName || pubHex.slice(0, 6)) + ".");
     markNotifsRead();
+    publishContactList(state.following);
     return true;
   }
   return false;

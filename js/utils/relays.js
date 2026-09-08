@@ -107,6 +107,28 @@ export function publishBoardSnapshot(snap) {
   return pubWithRetry({ kind: POST_KIND, created_at: now, tags: tags, content: content });
 }
 
+/* publica la lista amistosa del usuario actual (kind 3, NIP-02): los pubkeys
+   que sigue. Tags p = lista de seguidos. Devuelve Promise<number> confirmed. */
+export function publishContactList(pubkeys) {
+  var now = Math.floor(Date.now() / 1000);
+  var tags = (pubkeys || []).map(function (pk) { return ["p", pk]; });
+  return pubWithRetry({ kind: 3, created_at: now, tags: tags, content: "" });
+}
+
+/* seguidores de un pubkey: cuenta los contact lists (kind 3) de otros usuarios
+   que lo incluyen. Devuelve Promise<number>. */
+export function fetchFollowerCount(pubHex) {
+  if (!pubHex) return Promise.resolve(0);
+  return queryEvents({ kinds: [3], "#p": [pubHex], limit: 200 }, { maxWait: 4000 })
+    .then(function (events) {
+      var authors = {};
+      events.forEach(function (ev) {
+        if (ev.pubkey && ev.pubkey !== pubHex) authors[ev.pubkey] = true;
+      });
+      return Object.keys(authors).length;
+    }).catch(function () { return 0; });
+}
+
 /* publica el perfil (kind 0, NIP-01) del usuario a los relays.
    input: { name, picture, desc, socials } */
 export function publishProfile(input) {

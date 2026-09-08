@@ -11,7 +11,7 @@ import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
-import { RELAYS } from "../utils/relays.js";
+import { RELAYS, fetchFollowerCount } from "../utils/relays.js";
 import { publishUserBoard } from "../utils/relay-sync.js";
 import { toast } from "../utils/dom.js";
 import { openImage } from "./lightbox.js";
@@ -173,15 +173,29 @@ export function renderProfile(boardId, user) {
     fbtn.type = "button";
     fbtn.className = "btn2 follow-btn";
     fbtn.textContent = isFollowing(user.pubHex) ? "Dejar de seguir" : "Seguir";
+    var fcounter = document.createElement("span");
+    fcounter.className = "follower-count";
+    fcounter.textContent = "…";
+    followRow.appendChild(fcounter);
     fbtn.addEventListener("click", function () {
       if (isFollowing(user.pubHex)) {
         unfollowUser(user.pubHex);
         fbtn.textContent = "Seguir";
+        updateFcount();
+        refresh();
       } else {
         followByPubHex(user.pubHex, user.name);
         fbtn.textContent = "Dejar de seguir";
+        updateFcount();
+        refresh();
       }
     });
+    var updateFcount = function () {
+      fetchFollowerCount(user.pubHex).then(function (n) {
+        fcounter.textContent = n + " " + (n === 1 ? "seguidor" : "seguidores");
+      }).catch(function () {});
+    };
+    updateFcount();
     followRow.appendChild(fbtn);
   }
 
@@ -255,6 +269,13 @@ export function renderMyProfile() {
     : "Mi perfil";
   info.appendChild(h3);
   info.appendChild(sub);
+  var folMe = document.createElement("p");
+  folMe.className = "follower-count";
+  folMe.textContent = "… seguidores";
+  info.appendChild(folMe);
+  fetchFollowerCount(me.pubHex).then(function (n) {
+    folMe.textContent = n + " " + (n === 1 ? "seguidor" : "seguidores");
+  }).catch(function () {});
   head.appendChild(info);
 
   if (isBanned(me.pubHex)) {
