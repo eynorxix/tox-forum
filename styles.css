@@ -1208,6 +1208,56 @@ textarea::placeholder {
   min-height: 70px;
 }
 .my-quick input[type="file"] { margin-bottom: 8px; }
+
+/* pestañas /Publico/ | /Mis-publicaciones/ del perfil propio */
+.profile-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+.profile-tab {
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.profile-tab:hover { border-color: var(--accent); }
+.profile-tab.active {
+  background: var(--accent);
+  color: #16161e;
+  border-color: var(--accent);
+}
+.profile-tabpanel { display: none; }
+.profile-tabpanel.active { display: block; }
+
+/* modulo /publico/ del perfil */
+.profile-publico { margin-top: 6px; }
+.profile-forums h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-family: "Courier New", monospace;
+  color: var(--accent);
+}
+.profile-forums .fo-grid {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  margin-bottom: 10px;
+}
+.profile-publico .btn2 { margin-top: 4px; }
+
+/* lista de redes en settings */
+.redes-list .created-item { border: 1px solid var(--border); border-left: 3px solid var(--green); }
+.redes-list .created-head { display: flex; gap: 8px; align-items: baseline; }
+.redes-list .created-name {
+  font-size: 13px;
+  word-break: break-all;
+  color: var(--text-side);
+}
 .my-post-image {
   margin: 0 0 6px;
 }

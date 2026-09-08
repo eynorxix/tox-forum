@@ -1,7 +1,7 @@
 /* ===== settings del perfil: layout con secciones separadas =====
    Agrupa en un solo lugar: editar perfil, claves (nsec/npub) y foros.
    El perfil publico solo muestra avatar, nombre, descripcion, publicar y posts. */
-import { getMe, save, logout, createForum, renameForum, setForumStatus, deleteForum, getCreatedForums } from "../store/db.js";
+import { getMe, save, logout, createForum, renameForum, setForumStatus, deleteForum, getCreatedForums, mySocials, setSocials } from "../store/db.js";
 import { isStaff, isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
 import { fileToDataURL, toast } from "../utils/dom.js";
@@ -14,7 +14,7 @@ var backdrop = null;
 
 export function isSettingsOpen() { return !!backdrop; }
 
-export function openSettings() {
+export function openSettings(startTab) {
   if (backdrop) return;
   var me = getMe();
   if (!me) return;
@@ -38,11 +38,13 @@ export function openSettings() {
   head.appendChild(close);
   win.appendChild(head);
 
-  /* pestanas: Perfil | Claves | Foros (Foros solo para colaboradores/admin) */
-  var canForos = !!(me && isStaff(me.pubHex) && !isBanned(me.pubHex));
+  /* pestanas: Perfil | Claves | Redes | Foros (Redes y Foros solo para colaboradores/admin) */
+  var canCollab = !!(me && isStaff(me.pubHex) && !isBanned(me.pubHex));
+  var canForos = canCollab;
   var tabs = document.createElement("div");
   tabs.className = "settings-tabs";
   var labels = [["perfil", "Editar perfil"], ["claves", "Claves"]];
+  if (canCollab) labels.push(["redes", "Redes"]);
   if (canForos) labels.push(["foros", "Foros"]);
   var panels = {};
   labels.forEach(function (L) {
@@ -103,7 +105,7 @@ export function openSettings() {
       refresh();
       /* el nombre/perfil se publica a relays (kind 0) para que todos los
          usuarios vean el mismo nombre al conectarse por npub */
-      publishProfile({ name: me.name, picture: me.icon || null }).then(function (ok) {
+      publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
         toast(ok > 0 ? "Perfil actualizado y publicado (" + ok + " relays)" : "Perfil guardado solo en este navegador", ok > 0 ? "" : "warn");
       });
     };
@@ -197,6 +199,120 @@ export function openSettings() {
   pClaves.appendChild(logoutBtn);
   panels.claves = pClaves;
   win.appendChild(pClaves);
+
+  /* ----- panel: redes (colaboradores: titulo + url visibles en /publico/) ----- */
+  var pRedes = document.createElement("div");
+  pRedes.className = "settings-panel";
+  pRedes.dataset.spanel = "redes";
+
+  var redesInfo = document.createElement("p");
+  redesInfo.className = "fo-info";
+  redesInfo.textContent = "Las redes que agregues aqui se mostraran en tu perfil (modulo /publico/) para que los demas usuarios puedan comunicarse contigo.";
+  pRedes.appendChild(redesInfo);
+
+  var redesList = document.createElement("div");
+  redesList.className = "redes-list";
+  pRedes.appendChild(redesList);
+
+  var redesAddRow = document.createElement("div");
+  redesAddRow.className = "settings-create-forum";
+  var redTitleIn = document.createElement("input");
+  redTitleIn.type = "text";
+  redTitleIn.className = "settings-input";
+  redTitleIn.placeholder = "Titulo de la red (ej: GitHub, NOSTR)...";
+  var redUrlIn = document.createElement("input");
+  redUrlIn.type = "text";
+  redUrlIn.className = "settings-input";
+  redUrlIn.placeholder = "https://...";
+  var redAddBtn = document.createElement("button");
+  redAddBtn.type = "button";
+  redAddBtn.className = "btn2";
+  redAddBtn.textContent = "Agregar red";
+  redesAddRow.appendChild(redTitleIn);
+  redesAddRow.appendChild(redUrlIn);
+  redesAddRow.appendChild(redAddBtn);
+  pRedes.appendChild(redesAddRow);
+
+  var redesAct = document.createElement("div");
+  redesAct.className = "form-actions";
+  var redSaveBtn = document.createElement("button");
+  redSaveBtn.type = "button";
+  redSaveBtn.className = "btn2";
+  redSaveBtn.textContent = "Guardar redes";
+  redSaveBtn.addEventListener("click", function () {
+    saveRedesArch();
+  });
+  redesAct.appendChild(redSaveBtn);
+  pRedes.appendChild(redesAct);
+
+  function saveRedesArch() {
+    setSocials(currentRedes());
+    save();
+    refreshChip();
+    refresh();
+    publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
+      toast(ok > 0 ? "Redes actualizadas y publicadas (" + ok + " relays)" : "Redes guardadas solo en este navegador", ok > 0 ? "" : "warn");
+    });
+  }
+
+  function currentRedes() {
+    return mySocials().slice();
+  }
+
+  function renderRedesList() {
+    redesList.innerHTML = "";
+    var list = mySocials();
+    if (!list.length) {
+      var noneR = document.createElement("p");
+      noneR.className = "rp-text";
+      noneR.textContent = "Aun no has agregado redes.";
+      redesList.appendChild(noneR);
+      return;
+    }
+    list.forEach(function (s, idx) {
+      var item = document.createElement("div");
+      item.className = "created-item";
+      var head = document.createElement("div");
+      head.className = "created-head";
+      var tag = document.createElement("span");
+      tag.className = "created-tag";
+      tag.textContent = s.label;
+      head.appendChild(tag);
+      var nm = document.createElement("span");
+      nm.className = "created-name";
+      nm.textContent = s.url;
+      head.appendChild(nm);
+      item.appendChild(head);
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn2 danger";
+      del.textContent = "Quitar";
+      del.addEventListener("click", function () {
+        setSocials(currentRedes().filter(function (_, i) { return i !== idx; }));
+        saveRedesArch();
+      });
+      item.appendChild(del);
+      redesList.appendChild(item);
+    });
+  }
+  renderRedesList();
+
+  redAddBtn.addEventListener("click", function () {
+    var t = redTitleIn.value.trim();
+    var u = redUrlIn.value.trim();
+    if (!t || !/^https?:\/\//i.test(u)) {
+      toast("Escribe un titulo y una url valida (https://...)", "warn");
+      return;
+    }
+    setSocials(currentRedes().concat([{ label: t, url: u }]));
+    saveRedesArch();
+    redTitleIn.value = "";
+    redUrlIn.value = "";
+    renderRedesList();
+  });
+
+  panels.redes = pRedes;
+  win.appendChild(pRedes);
 
   /* ----- panel: foros (administrador de foros creados) ----- */
   var pForos = document.createElement("div");
@@ -394,7 +510,7 @@ export function openSettings() {
       p.classList.toggle("active", p.dataset.spanel === name);
     });
   }
-  swapTab("perfil");
+  swapTab(startTab && panels[startTab] ? startTab : "perfil");
 
   close.addEventListener("click", closeSettings);
   backdrop.addEventListener("click", function (ev) {

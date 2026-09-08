@@ -79,17 +79,23 @@ export function meName() {
   return state.me ? state.me.name : (state.anonName || "Anonimo");
 }
 
-/* registro de un nuevo usuario (desde anonimo) */
+/* registro de un nuevo usuario (desde anonimo). Valida nombre y edad en
+   JS (no se fia del HTML): nombre >= 2 chars y edad >= 18 o devuelve null. */
 export function registerUser(name, keys, age) {
+  var cleanName = String(name || "").trim();
+  var cleanAge = parseInt(age, 10);
+  if (cleanName.length < 2) return null;
+  if (!(cleanAge >= 18)) return null;   /* NaN o menor: rechazado */
   var user = {
-    name: name,
+    name: cleanName,
     nsec: keys.nsec,
     npub: keys.npub,
     pubHex: keys.pubHex,
     sec: keys.sec || null,   /* clave privada en base64 (para firmar a relays) */
     icon: null,
     desc: "Mi perfil en ForosRaiz: edita tu imagen y descripcion desde aqui.",
-    age: age,
+    age: cleanAge,
+    socials: [],             /* [{label,url}] redes publicas del usuario */
     mainForum: null,
     forums: [],
     links: [],
@@ -122,6 +128,7 @@ export function login(nsec) {
         icon: null,
         desc: "Mi perfil en ForosRaiz.",
         age: 18,
+        socials: [],
         mainForum: null,
         forums: [],
         links: [],
@@ -142,11 +149,11 @@ export function login(nsec) {
         state.me.name = real;
         save();
       }
-      publishProfile({ name: state.me.name, picture: state.me.icon || null });
+      publishProfile({ name: state.me.name, picture: state.me.icon || null, desc: state.me.desc, socials: state.me.socials || [] });
       if (_onLogin) _onLogin();
       return true;
     }).catch(function () {
-      publishProfile({ name: state.me.name, picture: state.me.icon || null });
+      publishProfile({ name: state.me.name, picture: state.me.icon || null, desc: state.me.desc, socials: state.me.socials || [] });
       if (_onLogin) _onLogin();
       return true;
     });
@@ -419,6 +426,33 @@ export function myPosts() {
 export function getCreatedForums() {
   syncBoardsFromCreated();
   return state.createdForums.slice();
+}
+
+/* foros creados por un pubkey concreto (para el modulo publico del perfil) */
+export function forumsOf(pubHex) {
+  if (!pubHex) return [];
+  return (state.createdForums || []).filter(function (f) {
+    return f.ownerPub === pubHex;
+  });
+}
+
+/* redes sociales publicas del usuario actual (array [{label,url}]) */
+export function mySocials() {
+  return state.me ? (state.me.socials || []).slice() : [];
+}
+
+/* guarda las redes sociales del usuario actual y devuelve true si cambio */
+export function setSocials(list) {
+  if (!state.me) return false;
+  var clean = (list || []).map(function (s) {
+    return {
+      label: String((s && s.label) ? s.label : (s && s[0]) || "").trim(),
+      url: String((s && s.url) ? s.url : (s && s[1]) || "").trim()
+    };
+  }).filter(function (s) { return s.label && /^https?:\/\//i.test(s.url); });
+  state.me.socials = clean;
+  save();
+  return true;
 }
 
 /* foros creados por OTROS colaboradores, bajados de los relays (kind 13371):

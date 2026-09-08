@@ -51,8 +51,10 @@ export function renderHome() {
   aboutBody.appendChild(aboutText);
   var aboutImg = document.createElement("img");
   aboutImg.className = "chan-about-img";
-  aboutImg.src = "assets/forosraiz-logo.png";
+  aboutImg.src = "https://images.pexels.com/photos/38241066/pexels-photo-38241066.jpeg";
   aboutImg.alt = "ForosRaiz";
+  aboutImg.loading = "eager";
+  aboutImg.decoding = "async";
   aboutBody.appendChild(aboutImg);
   about.appendChild(aboutBody);
   wrap.appendChild(about);

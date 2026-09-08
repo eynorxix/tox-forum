@@ -94,7 +94,8 @@ function buildRegister() {
   lblAge.textContent = "Edad (minimo 18):";
   var age = document.createElement("input");
   age.type = "number";
-  age.min = "1";
+  age.min = "18";
+  age.max = "120";
   age.className = "auth-input";
   age.placeholder = "Tu edad";
   box.appendChild(lblAge);
@@ -134,28 +135,88 @@ function buildRegister() {
   status.className = "auth-status";
   box.appendChild(status);
 
-  function update() {
-    if (!chk.checked || name.value.trim().length < 2 || parseInt(age.value, 10) < 18) {
-      btn.disabled = true;
-    } else {
-      btn.disabled = false;
-    }
+  /* ---- estado autoritativo en JS: el HTML solo refleja esto.
+     Si alguien edita el DOM (devtools) para saltarse las condiciones,
+     enforce() lo rescribe y el submit solo acepta el estado de JS. ---- */
+  var accepted = false;    /* terminos ACEPTADOS por el checkbox real */
+  var lastName = "";
+  var lastAge = 0;         /* edad validada (0 = invalida) */
+
+  function validName() { return name.value.trim().length >= 2; }
+
+  function revalidate() {
+    lastName = name.value.trim();
+    var a = parseInt(age.value, 10);
+    if (isNaN(a)) lastAge = 0;
+    else if (a < 18) lastAge = 0;
+    else if (a > 120) lastAge = 120;
+    else lastAge = a;
+    return (validName() && lastAge >= 18 && accepted);
   }
-  name.addEventListener("input", update);
-  age.addEventListener("input", update);
-  chk.addEventListener("change", update);
+
+  /* rescribe el estado visible para que coincida con el autoritativo:
+     el checkbox y el estado del boton siempre quedan como dice JS, usando
+     SOLO los valores de JS (lastName/lastAge/accepted), nunca releidos del
+     DOM (asi un edit por devtools no convierte un valor invalido en valido). */
+  function enforce() {
+    if (name.value !== lastName) name.value = lastName;
+    if (chk.checked !== accepted) chk.checked = accepted;
+    var blocked = !(accepted && lastName.length >= 2 && lastAge >= 18);
+    if (btn.disabled !== blocked) btn.disabled = blocked;
+  }
+  var enforceTimer = setInterval(enforce, 400);
+
+  /* los handlers actualizan el estado autoritativo despues de cada cambio */
+  name.addEventListener("input", function () { revalidate(); enforce(); });
+  age.addEventListener("input", function () { revalidate(); enforce(); });
+  chk.addEventListener("change", function () {
+    accepted = chk.checked;   /* si lo desmarcan, se queda en false (JS) */
+    enforce();
+  });
+  /* si intentan tildarlo por consola sin el evento real, se mantiene false */
+  chk.addEventListener("click", function () {
+    accepted = chk.checked;
+    enforce();
+  });
+
+  function stopEnforce() {
+    clearInterval(enforceTimer);
+  }
 
   btn.addEventListener("click", function () {
-    if (parseInt(age.value, 10) < 18) {
+    /* se decide SOLO con el estado autoritativo de JS (lastName/lastAge/
+       accepted), actualizado por eventos reales de input/change. El DOM usa
+       enforce() para reflejarlo; si lo editarn, el submit no lo relee. */
+    if (!accepted) {
+      status.textContent = "Debes marcar que has leido y aceptas los terminos y condiciones.";
+      status.style.color = "var(--accent)";
+      enforce();
+      return;
+    }
+    if (lastAge < 18) {
       status.textContent = "Debes tener al menos 18 anos para registrarte.";
       status.style.color = "var(--accent)";
+      enforce();
+      return;
+    }
+    if (lastName.length < 2) {
+      status.textContent = "Escribe un nombre de usuario de al menos 2 caracteres.";
+      status.style.color = "var(--accent)";
+      enforce();
       return;
     }
     btn.disabled = true;
     status.textContent = "Generando tus claves...";
     status.style.color = "";
     generateKeys().then(function (keys) {
-      var user = registerUser(name.value.trim(), keys, parseInt(age.value, 10));
+      var user = registerUser(lastName, keys, lastAge);
+      if (!user) {
+        status.textContent = "No se pudo registrar: la validacion no es valida.";
+        status.style.color = "var(--accent)";
+        btn.disabled = false;
+        return;
+      }
+      stopEnforce();
       publishProfile({ name: user.name, picture: null });
       publishRegistration({
         name: user.name, npub: user.npub, pubHex: user.pubHex,

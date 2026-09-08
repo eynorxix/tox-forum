@@ -83,9 +83,9 @@ export function renderSidebar(boardId) {
         pubHex: u.pubHex,
         name: u.name,
         icon: u.icon || null,
-        desc: "Colaborador de ForosRaiz.",
+        desc: u.desc || "Colaborador de ForosRaiz.",
         posts: posts.map(function (x) { return x.post.comment; }),
-        socials: []
+        socials: u.socials || []
       };
       openProfile(boardId, userObj);
     });

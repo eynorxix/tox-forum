@@ -133,6 +133,20 @@ export function showProfile(boardId, user) {
   renderNav();
   render();
   window.scrollTo(0, 0);
+  /* si el usuario visto tiene pubHex, buscamos su perfil PUBLICO (redes+desc)
+     en relays para completar el modulo /publico/ del perfil */
+  if (user && user.pubHex) {
+    import("../store/collabs.js").then(function (c) {
+      c.fetchCollabProfile(user.pubHex).then(function (p) {
+        if (!p || (!p.desc && !(p.socials && p.socials.length))) return;
+        var sent = session.profileView && session.profileView.user;
+        if (!sent) return;
+        sent.desc = p.desc || sent.desc || null;
+        sent.socials = p.socials && p.socials.length ? p.socials : (sent.socials || []);
+        render();
+      });
+    }).catch(function () {});
+  }
 }
 
 export function showMyProfile() {

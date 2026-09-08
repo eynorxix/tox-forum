@@ -6,7 +6,7 @@
 import { collabsByAdmin, adminsByAdmin } from "./moderation.js";
 import { fetchProfiles } from "../utils/relays.js";
 
-var profileCache = {};            /* pubHex -> { name, picture } */
+var profileCache = {};            /* pubHex -> { name, picture, desc, socials } */
 var loadedHexes = [];             /* hexes cuyos perfiles ya se pidieron */
 var onLoad = null;                /* callback cuando llegan perfiles */
 
@@ -25,12 +25,19 @@ export function approvedPubkeys() {
 /* perfiles en cache o placeholders; pide los que falten a los relays */
 function resolve(pubHex) {
   if (profileCache[pubHex]) return profileCache[pubHex];
-  profileCache[pubHex] = { name: pubHex.slice(0, 10), picture: null };
+  profileCache[pubHex] = { name: pubHex.slice(0, 10), picture: null, desc: null, socials: [] };
   if (loadedHexes.indexOf(pubHex) < 0) {
     loadedHexes.push(pubHex);
     fetchProfiles([pubHex]).then(function (map) {
       var p = map[pubHex];
-      if (p) profileCache[pubHex] = { name: p.name || pubHex.slice(0, 10), picture: p.picture || null };
+      if (p) {
+        profileCache[pubHex] = {
+          name: p.name || pubHex.slice(0, 10),
+          picture: p.picture || null,
+          desc: p.desc || null,
+          socials: p.socials || []
+        };
+      }
       if (onLoad) onLoad();
     }).catch(function () {});
   }
@@ -43,12 +50,58 @@ export function getCollabs(boardId) {
   var out = [];
   approvedPubkeys().forEach(function (hex) {
     var p = resolve(hex);
-    out.push({ pubHex: hex, name: p.name || hex.slice(0, 10), icon: p.picture || null });
+    out.push({
+      pubHex: hex,
+      name: p.name || hex.slice(0, 10),
+      icon: p.picture || null,
+      desc: p.desc || null,
+      socials: p.socials || []
+    });
   });
   return out;
+}
+
+/* publica el perfil KIND 0 con redes y descripcion para que los demas
+   usuarios vean el modulo /publico/ del perfil. */
+export function publishCollabProfile() {
+  import("./db.js").then(function (db) {
+    var me = db.getMe();
+    if (!me) return;
+    import("../utils/relays.js").then(function (r) {
+      r.publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: me.socials || [] });
+    }).catch(function () {});
+  }).catch(function () {});
 }
 
 /* devuelve todos los perfiles ya resueltos (para re-render rapido) */
 export function collabProfile(hex) {
   return resolve(hex);
+}
+
+/* fetch completo por Promise: espera a que el perfil llegue de relays y
+   devuelve {name, picture, desc, socials} (con valores de cache si falla). */
+export function fetchCollabProfile(hex) {
+  return new Promise(function (res) {
+    var snapshot = function () {
+      res(JSON.parse(JSON.stringify(collabProfile(hex))));
+    };
+    if (loadedHexes.indexOf(hex) < 0) {
+      loadedHexes.push(hex);
+      fetchProfiles([hex]).then(function (map) {
+        var p = map[hex];
+        if (p) {
+          profileCache[hex] = {
+            name: p.name || hex.slice(0, 10),
+            picture: p.picture || null,
+            desc: p.desc || null,
+            socials: p.socials || []
+          };
+        }
+        snapshot();
+        if (onLoad) onLoad();
+      }).catch(function () { snapshot(); });
+    } else {
+      snapshot();
+    }
+  });
 }

@@ -1,6 +1,10 @@
-/* ===== perfiles: vista de colaborador y mi perfil editable ===== */
+/* ===== perfiles: vista de colaborador y mi perfil editable =====
+   El perfil tiene una barra con /Publico/ y /Mis-publicaciones/:
+   - /Publico/  -> lo que ve cualquier usuario: descripcion, redes sociales y
+                   los foros creados por el usuario (en cuadricula).
+   - /Mis-publicaciones/ -> solo el dueno (quien inicio sesion) ve sus posts. */
 import { BOARDS } from "../config.js";
-import { state, getBoard, nextNo, save, getMe, myPosts, myMainForum, isAnon, ownPost, isFollowing, unfollowUser, canPostBoard } from "../store/db.js";
+import { state, getBoard, nextNo, save, getMe, myPosts, myMainForum, isAnon, ownPost, isFollowing, unfollowUser, canPostBoard, forumsOf, mySocials, setSocials } from "../store/db.js";
 import { session } from "../store/session.js";
 import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
@@ -15,7 +19,86 @@ import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
 import { openGifPicker } from "./gifpicker.js";
-import { isBanned } from "../store/moderation.js";
+import { isBanned, isStaff } from "../store/moderation.js";
+
+function socialsEl(user) {
+  var socials = document.createElement("div");
+  socials.className = "socials";
+  (user.socials || []).forEach(function (s) {
+    var label = s && (Array.isArray(s) ? s[0] : s.label);
+    var url = s && (Array.isArray(s) ? s[1] : s.url);
+    if (!label || !url) return;
+    var a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = label;
+    socials.appendChild(a);
+  });
+  if (!(user.socials || []).length) {
+    var hint = document.createElement("p");
+    hint.className = "rp-text";
+    hint.textContent = "Este usuario no ha agregado redes sociales.";
+    socials.appendChild(hint);
+  }
+  return socials;
+}
+
+/* los foros creados por un pubkey, en cuadricula (para /publico/) */
+function createdForumsGrid(pubHex) {
+  var wrap = document.createElement("div");
+  wrap.className = "profile-forums";
+  var t = document.createElement("h4");
+  t.textContent = "Foros creados";
+  wrap.appendChild(t);
+  var mine = forumsOf(pubHex);
+  if (!mine.length) {
+    var none = document.createElement("p");
+    none.className = "rp-text";
+    none.textContent = "Este usuario no ha creado foros.";
+    wrap.appendChild(none);
+    return wrap;
+  }
+  var grid = document.createElement("div");
+  grid.className = "fo-grid";
+  mine.forEach(function (f) {
+    var cell = document.createElement("div");
+    cell.className = "fo-cell";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "fo-body";
+    var nm = document.createElement("span");
+    nm.className = "fo-name";
+    nm.textContent = "/" + f.id + "/ " + f.name;
+    var st = document.createElement("span");
+    st.className = "fo-status";
+    st.textContent = f.status === "restringido" ? "Restringido" : "Libre";
+    btn.appendChild(nm);
+    btn.appendChild(st);
+    btn.addEventListener("click", function () {
+      navTo(f.id);
+    });
+    cell.appendChild(btn);
+    grid.appendChild(cell);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* modulo /publico/ del perfil: descripcion + redes + foros creados */
+function publicoPanel(user) {
+  var panel = document.createElement("div");
+  panel.className = "profile-publico";
+
+  var desc = document.createElement("p");
+  desc.className = "profile-desc";
+  desc.textContent = user.desc || "Sin descripcion.";
+  panel.appendChild(desc);
+
+  panel.appendChild(socialsEl(user));
+  panel.appendChild(createdForumsGrid(user.pubHex));
+  return panel;
+}
 
 export function renderProfile(boardId, user) {
   var b = BOARDS.find(function (x) { return x.id === boardId; }) || { name: boardId };
@@ -101,42 +184,11 @@ export function renderProfile(boardId, user) {
     followRow.appendChild(fbtn);
   }
 
-  var desc = document.createElement("p");
-  desc.className = "profile-desc";
-  desc.textContent = user.desc;
-
-  var socials = document.createElement("div");
-  socials.className = "socials";
-  (user.socials || []).forEach(function (s) {
-    var label = s && (Array.isArray(s) ? s[0] : s.label);
-    var url = s && (Array.isArray(s) ? s[1] : s.url);
-    if (!label || !url) return;
-    var a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = label;
-    socials.appendChild(a);
-  });
-
-  var postsSec = document.createElement("div");
-  postsSec.className = "profile-posts";
-  var title = document.createElement("h4");
-  title.textContent = "Publicaciones en /" + boardId + "/";
-  postsSec.appendChild(title);
-  user.posts.forEach(function (p) {
-    var div = document.createElement("div");
-    div.className = "profile-post";
-    div.innerHTML = linksInText(p);
-    attachAutoEmbeds(div);
-    postsSec.appendChild(div);
-  });
-
   wrap.appendChild(head);
   if (followRow) wrap.appendChild(followRow);
-  wrap.appendChild(desc);
-  wrap.appendChild(socials);
-  wrap.appendChild(postsSec);
+
+  /* los demas usuarios SOLO ven /publico/ (desc, redes, foros creados) */
+  wrap.appendChild(publicoPanel(user));
   return wrap;
 }
 
@@ -180,7 +232,7 @@ export function renderMyProfile() {
   var settingsBtn = document.createElement("a");
   settingsBtn.className = "btn2 settings-btn";
   settingsBtn.textContent = "Configuracion";
-  settingsBtn.title = "Editar perfil, claves y foros";
+  settingsBtn.title = "Editar perfil, claves, redes y foros";
   settingsBtn.href = "#";
   settingsBtn.addEventListener("click", function (ev) {
     ev.preventDefault();
@@ -211,10 +263,45 @@ export function renderMyProfile() {
     wrap.appendChild(banMine);
   }
 
-  var desc = document.createElement("p");
-  desc.className = "profile-desc";
-  desc.textContent = me.desc;
+  wrap.appendChild(backRow);
+  wrap.appendChild(head);
 
+  /* ---- barra /Publico/ | /Mis-publicaciones/ (las publicaciones solo las ve el dueno) ---- */
+  var tabs = document.createElement("div");
+  tabs.className = "profile-tabs";
+  var tabPub = document.createElement("button");
+  tabPub.type = "button";
+  tabPub.className = "profile-tab";
+  tabPub.textContent = "/Publico/";
+  var tabMine = document.createElement("button");
+  tabMine.type = "button";
+  tabMine.className = "profile-tab";
+  tabMine.textContent = "/Mis-publicaciones/";
+  tabs.appendChild(tabPub);
+  tabs.appendChild(tabMine);
+
+  var pPub = document.createElement("div");
+  pPub.className = "profile-tabpanel active";
+  var pMine = document.createElement("div");
+  pMine.className = "profile-tabpanel";
+
+  /* --- /Publico/: desc, redes (titulo+url) y foros creados, todo lo que ven los demas --- */
+  var publico = publicoPanel({
+    pubHex: me.pubHex,
+    desc: me.desc,
+    socials: mySocials()
+  });
+  pPub.appendChild(publico);
+  var editRedes = document.createElement("button");
+  editRedes.type = "button";
+  editRedes.className = "btn2";
+  editRedes.textContent = "Editar redes sociales";
+  editRedes.addEventListener("click", function () {
+    openSettings(isStaff(me.pubHex) && !isBanned(me.pubHex) ? "redes" : undefined);
+  });
+  pPub.appendChild(editRedes);
+
+  /* --- /Mis-publicaciones/: publicar y listar mis posts (privado) --- */
   var dest = myMainForum() || "d";
   var qWrap = document.createElement("div");
   qWrap.className = "my-quick";
@@ -245,6 +332,10 @@ export function renderMyProfile() {
   qBtn.addEventListener("click", function () {
     if (!canPostBoard(dest)) {
       toast("Foro restringido: solo el creador puede postear aqui.", "warn");
+      return;
+    }
+    if (isBanned(getMe().pubHex)) {
+      toast("Tu cuenta esta baneada: no puedes publicar.", "err");
       return;
     }
     var qtext = qTa.value.trim();
@@ -279,6 +370,7 @@ export function renderMyProfile() {
       finishQ(null);
     }
   });
+  pMine.appendChild(qWrap);
 
   var postsSec = document.createElement("div");
   postsSec.className = "my-posts";
@@ -337,12 +429,21 @@ export function renderMyProfile() {
       postsSec.appendChild(div);
     });
   }
+  pMine.appendChild(postsSec);
 
-  wrap.appendChild(backRow);
-  wrap.appendChild(head);
-  wrap.appendChild(desc);
-  wrap.appendChild(qWrap);
-  wrap.appendChild(postsSec);
+  wrap.appendChild(tabs);
+  wrap.appendChild(pPub);
+  wrap.appendChild(pMine);
+
+  function swap(which) {
+    tabPub.classList.toggle("active", which === "pub");
+    tabMine.classList.toggle("active", which === "mine");
+    pPub.classList.toggle("active", which === "pub");
+    pMine.classList.toggle("active", which === "mine");
+  }
+  tabPub.addEventListener("click", function () { swap("pub"); });
+  tabMine.addEventListener("click", function () { swap("mine"); });
+  swap("pub");
 
   return wrap;
 }

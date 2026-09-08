@@ -108,14 +108,17 @@ export function publishBoardSnapshot(snap) {
 }
 
 /* publica el perfil (kind 0, NIP-01) del usuario a los relays.
-   input: { name, picture } */
+   input: { name, picture, desc, socials } */
 export function publishProfile(input) {
   var now = Math.floor(Date.now() / 1000);
   var content = JSON.stringify({
     name: input.name,
     display_name: input.name,
     picture: input.picture || "",
-    about: "Perfil de ForosRaiz"
+    about: input.desc || "Perfil de ForosRaiz",
+    socials: (input.socials || []).map(function (s) {
+      return { label: s.label || s[0] || "", url: s.url || s[1] || "" };
+    })
   });
   return pubWithRetry({ kind: 0, created_at: now, tags: [], content: content });
 }
@@ -373,7 +376,7 @@ export function fetchNames(pubkeys) {
 }
 
 /* perfiles (kind 0) para una lista de pubkeys.
-   Devuelve Promise<map pubkey->{name, picture}>. */
+   Devuelve Promise<map pubkey->{name, picture, desc, socials}>. */
 export function fetchProfiles(pubkeys) {
   var keys = (pubkeys || []).filter(function (k) { return k; });
   if (!keys.length) return Promise.resolve({});
@@ -383,17 +386,33 @@ export function fetchProfiles(pubkeys) {
     .then(function (events) {
       var newest = {};
       var out = {};
-      unique.forEach(function (hex) { out[hex] = { name: hex.slice(0, 8), picture: null }; });
+      unique.forEach(function (hex) {
+        out[hex] = { name: hex.slice(0, 8), picture: null, desc: null, socials: [] };
+      });
       events.forEach(function (ev) {
         var created = ev.created_at || 0;
         if (newest[ev.pubkey] !== undefined && created < newest[ev.pubkey]) return;
         newest[ev.pubkey] = created;
-        var entry = out[ev.pubkey] || { name: ev.pubkey.slice(0, 8), picture: null };
+        var entry = out[ev.pubkey] || {
+          name: ev.pubkey.slice(0, 8),
+          picture: null,
+          desc: null,
+          socials: []
+        };
         try {
           var data = (typeof ev.content === "string") ? JSON.parse(ev.content) : null;
           if (data) {
             if (data.display_name || data.name) entry.name = data.display_name || data.name;
             if (data.picture) entry.picture = data.picture;
+            if (data.about) entry.desc = data.about;
+            if (Array.isArray(data.socials)) {
+              entry.socials = data.socials.map(function (s) {
+                return {
+                  label: (s && s.label) || (Array.isArray(s) && s[0]) || "",
+                  url: (s && s.url) || (Array.isArray(s) && s[1]) || ""
+                };
+              }).filter(function (s) { return s.label && s.url; });
+            }
           }
         } catch (e) { /* usa pubkey corto */ }
         out[ev.pubkey] = entry;
@@ -402,7 +421,9 @@ export function fetchProfiles(pubkeys) {
     })
     .catch(function () {
       var out = {};
-      unique.forEach(function (hex) { out[hex] = { name: hex.slice(0, 8), picture: null }; });
+      unique.forEach(function (hex) {
+        out[hex] = { name: hex.slice(0, 8), picture: null, desc: null, socials: [] };
+      });
       return out;
     });
 }
