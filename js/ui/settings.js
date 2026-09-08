@@ -125,6 +125,23 @@ export function openSettings(startTab) {
   });
   act.appendChild(sBtn);
   pPerfil.appendChild(act);
+
+  /* cerrar sesion directamente desde editar perfil */
+  var logoutPerfil = document.createElement("div");
+  logoutPerfil.className = "form-actions logout-perfil-act";
+  var logoutBtnPerfil = document.createElement("button");
+  logoutBtnPerfil.type = "button";
+  logoutBtnPerfil.className = "btn2 logout-btn";
+  logoutBtnPerfil.textContent = "Cerrar sesion";
+  logoutBtnPerfil.addEventListener("click", function () {
+    logout();
+    closeSettings();
+    refreshChip();
+    navTo("home");
+  });
+  logoutPerfil.appendChild(logoutBtnPerfil);
+  pPerfil.appendChild(logoutPerfil);
+
   panels.perfil = pPerfil;
   win.appendChild(pPerfil);
 

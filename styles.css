@@ -471,8 +471,8 @@ button, input[type=submit] {
   border: 1px solid var(--border);
   background: var(--bg-alt);
   color: var(--text);
-  padding: 4px 12px;
-  font-size: 16px;
+  padding: 2px 8px;
+  font-size: 14px;
   cursor: pointer;
 }
 button:hover, input[type=submit]:hover {
@@ -1224,7 +1224,7 @@ textarea::placeholder {
   font-family: "Courier New", monospace;
   font-size: 14px;
   font-weight: bold;
-  padding: 6px 14px;
+  padding: 2px 10px;
   cursor: pointer;
 }
 .profile-tab:hover { border-color: var(--accent); }
@@ -1734,7 +1734,7 @@ textarea::placeholder {
   border: 1px solid var(--border);
   background: none;
   color: var(--text-side);
-  padding: 6px 14px;
+  padding: 2px 10px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -1777,7 +1777,7 @@ textarea::placeholder {
   border: 1px solid var(--border);
   background: none;
   color: var(--text-side);
-  padding: 7px 16px;
+  padding: 2px 10px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -1979,6 +1979,9 @@ textarea::placeholder {
   word-break: break-all;
 }
 .key-value.nsec { color: var(--orange); border-color: var(--orange); }
+.logout-perfil-act { text-align: right; }
+.logout-perfil-act .logout-btn { width: auto; display: inline-block; border-color: var(--orange); color: var(--orange); }
+.logout-perfil-act .logout-btn:hover { background: var(--orange); color: #16161e; }
 .logout-btn { margin-top: 4px; border-color: var(--accent); color: var(--accent); }
 .logout-btn:hover { background: var(--accent); color: #16161e; }
 
