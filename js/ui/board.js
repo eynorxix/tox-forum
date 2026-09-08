@@ -198,8 +198,8 @@ function makePostForm(boardId, blockedForum) {
   var meBanned = getMe() && isBanned(getMe().pubHex);
   if (meBanned) {
     var bd = document.createElement("p");
-    bd.className = "notice";
-    bd.textContent = "Tu cuenta ha sido baneada por el administrador. Sera activada cuando el administrador lo permita, hasta entonces no puedes publicar.";
+    bd.className = "notice notice-ban";
+    bd.innerHTML = "<b>Tu cuenta ha sido baneada por el administrador.</b> Tus publicaciones estan ocultas. <b>Espera a ser desbaneado</b> para volver a publicar.";
     form.appendChild(bd);
     return form;
   }
@@ -476,8 +476,8 @@ function makeReplyForm(boardId, thread, blockedForum) {
   var meBanned = getMe() && isBanned(getMe().pubHex);
   if (meBanned) {
     var bd2 = document.createElement("p");
-    bd2.className = "notice";
-    bd2.textContent = "Tu cuenta ha sido baneada por el administrador. Sera activada cuando el administrador lo permita, hasta entonces no puedes responder.";
+    bd2.className = "notice notice-ban";
+    bd2.innerHTML = "<b>Tu cuenta ha sido baneada por el administrador.</b> Tus publicaciones estan ocultas. <b>Espera a ser desbaneado</b> para volver a responder.";
     form.appendChild(bd2);
     return form;
   }

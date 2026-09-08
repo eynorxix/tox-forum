@@ -150,6 +150,36 @@ function loadLocalOverrides() {
   } catch (e) {}
 }
 
+/* cliente hex (npub) de ADMIN_NPUB, calculado una vez en ensureBanInit().
+   Se usa para (re)consultar los eventos de roles/baneos del admin. */
+var adminHex = null;
+
+/* consulta el/los eventos 39001 (roles) y 39000 (bans legacy) MAS RECIENTES
+   del admin y los aplica solo si son nuevos (lastRoleTs/lastPubTs lo filtran).
+   Reentrante e idempotente; sirve como arranque y como re-sync periodico. */
+function resyncAdminEvents() {
+  if (!adminHex) return Promise.resolve();
+  var qRole = queryEvents({ kinds: [ROLE_KIND], authors: [adminHex], "#d": [ROLE_DTAG], limit: 10 }, { maxWait: 7000 })
+    .then(function (roleEvents) {
+      var newestRole = null;
+      roleEvents.forEach(function (ev) {
+        if (ev.pubkey !== adminHex) return;
+        if (!newestRole || ev.created_at > newestRole.created_at) newestRole = ev;
+      });
+      if (newestRole) applyRoleEvent(newestRole);
+    }).catch(function () {});
+  var qBan = queryEvents({ kinds: [BAN_KIND], authors: [adminHex], "#d": [BAN_DTAG], limit: 10 }, { maxWait: 7000 })
+    .then(function (banEvents) {
+      var newestBan = null;
+      banEvents.forEach(function (ev) {
+        if (ev.pubkey !== adminHex) return;
+        if (!newestBan || ev.created_at > newestBan.created_at) newestBan = ev;
+      });
+      if (newestBan) applyBanEvent(newestBan);
+    }).catch(function () {});
+  return Promise.all([qRole, qBan]);
+}
+
 /* arranca la moderacion: bases + eventos publicados del admin + suscripcion
    en vivo. Idempotente; se llama una vez al cargar el sitio. */
 var _init = null;
@@ -163,31 +193,13 @@ export function ensureBanInit() {
         : await decodeNpubToHex(BANNED_NPUBS[i]);
       if (hex) baseSet[hex] = true;
     }
-    var adminHex = null;
     if (ADMIN_NPUB) {
       adminHex = /^[0-9a-f]{64}$/.test(ADMIN_NPUB)
         ? ADMIN_NPUB
         : await decodeNpubToHex(ADMIN_NPUB);
     }
     if (adminHex) {
-      try {
-        var roleEvents = await queryEvents({ kinds: [ROLE_KIND], authors: [adminHex], "#d": [ROLE_DTAG], limit: 10 }, { maxWait: 7000 });
-        var newestRole = null;
-        roleEvents.forEach(function (ev) {
-          if (ev.pubkey !== adminHex) return;
-          if (!newestRole || ev.created_at > newestRole.created_at) newestRole = ev;
-        });
-        if (newestRole) applyRoleEvent(newestRole);
-      } catch (e) {}
-      try {
-        var banEvents = await queryEvents({ kinds: [BAN_KIND], authors: [adminHex], "#d": [BAN_DTAG], limit: 10 }, { maxWait: 7000 });
-        var newestBan = null;
-        banEvents.forEach(function (ev) {
-          if (ev.pubkey !== adminHex) return;
-          if (!newestBan || ev.created_at > newestBan.created_at) newestBan = ev;
-        });
-        if (newestBan) applyBanEvent(newestBan);
-      } catch (e) {}
+      await resyncAdminEvents();
       try {
         subscribeKindEvents({ kinds: [ROLE_KIND], authors: [adminHex], "#d": [ROLE_DTAG] }, function (ev) {
           if (!ev || ev.pubkey !== adminHex) return;
@@ -200,6 +212,10 @@ export function ensureBanInit() {
           applyBanEvent(ev);
         }).catch(function () {});
       } catch (e) {}
+      /* la suscripcion en vivo la cierra el pool a los ~maxWait (9s si el relay
+         no emite): con este re-sync cada 20s un baneo/rol nuevo publica igual
+         se aplica a quien ya tiene la pagina abierta. */
+      setInterval(function () { resyncAdminEvents(); }, 20000);
     }
     pruneBanned();
   })();
