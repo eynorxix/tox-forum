@@ -1860,33 +1860,11 @@ textarea::placeholder {
   padding: 20px;
   scrollbar-width: thin;
 }
-/* ===== modal de compartir perfil (#perfil/<pubHex>) ===== */
-.share-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.share-window {
-  position: relative;
-  background: var(--bg-alt);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 34px rgba(0, 0, 0, 0.5);
-  width: 100%;
-  max-width: 560px;
-  padding: 20px;
-}
-.share-window h3 { font-family: "Courier New", monospace; color: var(--accent); margin: 0 0 10px; }
+/* ===== modal de compartir perfil (usa estructura settings) ===== */
 .share-info { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
-.share-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.share-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .share-row input[type="text"] { flex: 1; min-width: 0; }
-.share-window .btn2 { margin-bottom: 8px; }
-.share-window .share-close { border-color: var(--red, #d33); color: var(--red, #d33); }
-.share-window .share-close:hover { background: var(--red, #d33); color: #16161e; }
+.share-open { display: block; width: 100%; margin-bottom: 8px; text-align: left; }
 .share-btn { border-color: var(--teal); color: var(--teal); }
 .share-btn:hover { background: var(--teal); color: #16161e; }
 
@@ -2044,8 +2022,34 @@ textarea::placeholder {
 .user-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
 .follow-btn { border-color: var(--green); color: var(--green); }
 .follow-btn:hover { background: var(--green); color: #16161e; }
-.profile-follow { display: flex; align-items: center; gap: 12px; margin: 8px 0 14px; }
-.follower-count { font-size: 13px; color: var(--muted); }
+
+/* ---- perfil ajeno: grid 2 columnas ---- */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+.profile-main { min-width: 0; }
+.profile-main .profile-head { margin-bottom: 4px; }
+.profile-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  padding: 12px;
+}
+.follower-count { font-size: 18px; color: var(--accent); font-family: "Courier New", monospace; }
+.profile-head .mine-count { font-size: 14px; color: var(--muted); font-family: inherit; }
+.profile-side-btns { display: flex; flex-direction: column; gap: 8px; }
+.profile-side-btns .btn2 { width: 100%; text-align: center; }
+@media (max-width: 640px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-side { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .profile-side-btns { flex-direction: row; width: 100%; }
+}
 
 /* ===== notificaciones ===== */
 .notif-pop {

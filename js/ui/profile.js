@@ -87,14 +87,17 @@ function createdForumsGrid(pubHex) {
 
 /* modulo /publico/ del perfil: descripcion + redes + foros creados
    (el avatar del usuario se muestra arriba en el head del perfil) */
-function publicoPanel(user) {
+function publicoPanel(user, opts) {
+  opts = opts || {};
   var panel = document.createElement("div");
   panel.className = "profile-publico";
 
-  var desc = document.createElement("p");
-  desc.className = "profile-desc";
-  desc.textContent = user.desc || "Sin descripcion.";
-  panel.appendChild(desc);
+  if (opts.withDesc !== false) {
+    var desc = document.createElement("p");
+    desc.className = "profile-desc";
+    desc.textContent = user.desc || "Sin descripcion.";
+    panel.appendChild(desc);
+  }
 
   panel.appendChild(socialsEl(user));
   panel.appendChild(createdForumsGrid(user.pubHex));
@@ -105,12 +108,21 @@ function publicoPanel(user) {
 function openShareProfile(pubHex) {
   var url = location.origin + location.pathname + "#perfil/" + pubHex;
   var box = document.createElement("div");
-  box.className = "share-backdrop";
+  box.className = "settings-backdrop";
   var win = document.createElement("div");
-  win.className = "share-window";
+  win.className = "settings-window";
+  var head = document.createElement("div");
+  head.className = "settings-head";
   var t = document.createElement("h3");
   t.textContent = "Compartir perfil";
-  win.appendChild(t);
+  var close = document.createElement("button");
+  close.type = "button";
+  close.className = "settings-close";
+  close.textContent = "X";
+  close.addEventListener("click", function () { box.remove(); });
+  head.appendChild(t);
+  head.appendChild(close);
+  win.appendChild(head);
   var p = document.createElement("p");
   p.className = "share-info";
   p.textContent = "Este enlace muestra el perfil publico del usuario: sus redes sociales, descripcion y foros creados. Puedes compartirlo donde quieras.";
@@ -143,18 +155,12 @@ function openShareProfile(pubHex) {
   win.appendChild(row);
   var openBtn = document.createElement("button");
   openBtn.type = "button";
-  openBtn.className = "btn2";
+  openBtn.className = "btn2 share-open";
   openBtn.textContent = "Abrir en otra pestana";
   openBtn.addEventListener("click", function () {
     window.open(url, "_blank", "noopener");
   });
   win.appendChild(openBtn);
-  var closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "btn2 share-close";
-  closeBtn.textContent = "Cerrar";
-  closeBtn.addEventListener("click", function () { box.remove(); });
-  win.appendChild(closeBtn);
   box.appendChild(win);
   box.addEventListener("click", function (ev) {
     if (ev.target === box) box.remove();
@@ -237,19 +243,30 @@ export function renderProfile(boardId, user) {
 
   var me = getMe();
   var isOwnPub = me && user.pubHex && user.pubHex === me.pubHex;
-  var followRow = null;
+
+  /* layout de 2 columnas: izq = perfil (icon/nombre/desc), der = seguidores + botones */
+  var grid = document.createElement("div");
+  grid.className = "profile-grid";
+  var main = document.createElement("div");
+  main.className = "profile-main";
+  main.appendChild(head);
+  var pDesc = document.createElement("p");
+  pDesc.className = "profile-desc";
+  pDesc.textContent = user.desc || "Sin descripcion.";
+  main.appendChild(pDesc);
+  grid.appendChild(main);
+
+  var side = null;
   if (user.pubHex && !isOwnPub) {
-    followRow = document.createElement("div");
-    followRow.className = "profile-follow";
-    if (user.pubHex) followRow.appendChild(shareButton(user.pubHex));
+    side = document.createElement("div");
+    side.className = "profile-side";
+    var fcounter = document.createElement("span");
+    fcounter.className = "follower-count";
+    fcounter.textContent = "…";
     var fbtn = document.createElement("button");
     fbtn.type = "button";
     fbtn.className = "btn2 follow-btn";
     fbtn.textContent = isFollowing(user.pubHex) ? "Dejar de seguir" : "Seguir";
-    var fcounter = document.createElement("span");
-    fcounter.className = "follower-count";
-    fcounter.textContent = "…";
-    followRow.appendChild(fcounter);
     fbtn.addEventListener("click", function () {
       if (isFollowing(user.pubHex)) {
         unfollowUser(user.pubHex);
@@ -269,14 +286,20 @@ export function renderProfile(boardId, user) {
       }).catch(function () {});
     };
     updateFcount();
-    followRow.appendChild(fbtn);
+    var btnRow = document.createElement("div");
+    btnRow.className = "profile-side-btns";
+    btnRow.appendChild(fbtn);
+    btnRow.appendChild(shareButton(user.pubHex));
+    side.appendChild(fcounter);
+    side.appendChild(btnRow);
+    grid.appendChild(side);
   }
 
-  wrap.appendChild(head);
-  if (followRow) wrap.appendChild(followRow);
+  wrap.appendChild(grid);
 
-  /* los demas usuarios SOLO ven /publico/ (desc, redes, foros creados) */
-  wrap.appendChild(publicoPanel(user));
+  /* los demas usuarios SOLO ven la parte publica (redes, foros creados);
+     la descripcion ya se mostro arriba en la columna izquierda */
+  wrap.appendChild(publicoPanel(user, { withDesc: false }));
   return wrap;
 }
 
@@ -334,7 +357,7 @@ export function renderMyProfile() {
   info.appendChild(h3);
   info.appendChild(sub);
   var folMe = document.createElement("p");
-  folMe.className = "follower-count";
+  folMe.className = "follower-count mine-count";
   folMe.textContent = "… seguidores";
   info.appendChild(folMe);
   fetchFollowerCount(me.pubHex).then(function (n) {
