@@ -1238,26 +1238,6 @@ textarea::placeholder {
 
 /* modulo /publico/ del perfil */
 .profile-publico { margin-top: 6px; }
-.profile-publico-avatar { margin-bottom: 10px; }
-.profile-publico-avatar .pub-avatar {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  display: inline-block;
-  cursor: zoom-in;
-}
-.profile-publico-avatar .pub-avatar.placeholder {
-  width: 84px;
-  height: 84px;
-  line-height: 84px;
-  text-align: center;
-  font-size: 34px;
-  background: var(--bg-alt);
-  border: 1px solid var(--border);
-  color: var(--text-side);
-}
 .profile-forums h4 {
   margin: 0 0 8px;
   font-size: 15px;

@@ -85,28 +85,11 @@ function createdForumsGrid(pubHex) {
   return wrap;
 }
 
-/* modulo /publico/ del perfil: avatar + descripcion + redes + foros creados */
+/* modulo /publico/ del perfil: descripcion + redes + foros creados
+   (el avatar del usuario se muestra arriba en el head del perfil) */
 function publicoPanel(user) {
   var panel = document.createElement("div");
   panel.className = "profile-publico";
-
-  var avWrap = document.createElement("div");
-  avWrap.className = "profile-publico-avatar";
-  if (user.icon) {
-    var av = document.createElement("img");
-    av.src = user.icon;
-    av.alt = (user.name || "").charAt(0).toUpperCase();
-    av.className = "pub-avatar";
-    av.title = "Imagen de perfil";
-    av.addEventListener("click", function () { openImage(user.icon); });
-    avWrap.appendChild(av);
-  } else {
-    var ph = document.createElement("div");
-    ph.className = "pub-avatar placeholder";
-    ph.textContent = (user.name || "?").charAt(0).toUpperCase();
-    avWrap.appendChild(ph);
-  }
-  panel.appendChild(avWrap);
 
   var desc = document.createElement("p");
   desc.className = "profile-desc";
@@ -307,7 +290,6 @@ export function renderMyProfile() {
   var publico = publicoPanel({
     pubHex: me.pubHex,
     name: me.name,
-    icon: me.icon,
     desc: me.desc,
     socials: mySocials()
   });
