@@ -78,41 +78,67 @@ if (mpBtn) {
   });
 }
 
-/* movil: boton "Foros" de la barra superior abre/cierra el drawer del panel
-   derecho (foros, recomendados y secciones). Se rellena en render(). */
-var mobileForosBtn = document.getElementById("mobile-foros-btn");
-var mobileRap = document.getElementById("mobile-rap");
-var mobileRapBackdrop = document.getElementById("mobile-rap-backdrop");
-function setMobileRap(open) {
-  if (!mobileRap || !mobileRapBackdrop) return;
-  if (open && mobileRap.style.display !== "block") {
-    render();
-    refreshNotifBadge();
-    mobileRap.style.display = "block";
-    mobileRapBackdrop.style.display = "block";
-    mobileRapBackdrop.classList.add("show");
-    mobileRap.classList.add("open");
-  } else if (!open && mobileRap.style.display !== "none") {
-    mobileRap.style.display = "none";
-    mobileRapBackdrop.style.display = "none";
-    mobileRapBackdrop.classList.remove("show");
-    mobileRap.classList.remove("open");
+/* movil: botones "Colab" (panel izquierdo) y "Foros" (panel derecho) abren y
+   cierran sus drawers. Cada drawer se rellena en render(). Abrir uno cierra
+   el otro. */
+function bindMobileDrawer(btnId, drawerId, backdropId, otherDrawerId) {
+  var btn = document.getElementById(btnId);
+  var drawer = document.getElementById(drawerId);
+  var backdrop = document.getElementById(backdropId);
+  var other = document.getElementById(otherDrawerId);
+  if (!btn || !drawer || !backdrop) return;
+
+  function setOpen(open) {
+    var isOpen = drawer.style.display === "block";
+    if (open && !isOpen) {
+      if (other && other.style.display === "block") {
+        var otherBack = document.getElementById(otherDrawerId === "mobile-rap" ? "mobile-rap-backdrop" : "mobile-colab-backdrop");
+        other.style.display = "none";
+        if (otherBack) { otherBack.style.display = "none"; otherBack.classList.remove("show"); }
+      }
+      render();
+      drawer.style.display = "block";
+      backdrop.style.display = "block";
+      backdrop.classList.add("show");
+      drawer.classList.add("open");
+    } else if (!open && isOpen) {
+      drawer.style.display = "none";
+      backdrop.style.display = "none";
+      backdrop.classList.remove("show");
+      drawer.classList.remove("open");
+    }
   }
-}
-if (mobileForosBtn) {
-  mobileForosBtn.addEventListener("click", function () {
-    setMobileRap(mobileRap.style.display === "none");
+
+  btn.addEventListener("click", function () {
+    setOpen(drawer.style.display !== "block");
   });
-}
-if (mobileRapBackdrop) {
-  mobileRapBackdrop.addEventListener("click", function () { setMobileRap(false); });
-}
-if (mobileRap) {
-  mobileRap.addEventListener("click", function (ev) {
+  backdrop.addEventListener("click", function () { setOpen(false); });
+  drawer.addEventListener("click", function (ev) {
     var el = ev.target.closest ? ev.target.closest("[data-board]") : null;
-    if (el) { setMobileRap(false); }
+    if (el) setOpen(false);
   });
 }
+
+bindMobileDrawer("mobile-colab-btn", "mobile-colab", "mobile-colab-backdrop", "mobile-rap");
+bindMobileDrawer("mobile-foros-btn", "mobile-rap", "mobile-rap-backdrop", "mobile-colab");
+
+/* al navegar a una seccion distinta se cierran los drawers del movil */
+document.addEventListener("click", function (ev) {
+  var nav = ev.target.closest ? ev.target.closest("[data-board], #notif-btn, .my-profile-chip, #nav-home") : null;
+  if (!nav) return;
+  var colab = document.getElementById("mobile-colab");
+  var rap = document.getElementById("mobile-rap");
+  if (colab && colab.style.display === "block") {
+    colab.style.display = "none";
+    var cBack = document.getElementById("mobile-colab-backdrop");
+    if (cBack) { cBack.style.display = "none"; cBack.classList.remove("show"); }
+  }
+  if (rap && rap.style.display === "block") {
+    rap.style.display = "none";
+    var rBack = document.getElementById("mobile-rap-backdrop");
+    if (rBack) { rBack.style.display = "none"; rBack.classList.remove("show"); }
+  }
+});
 
 /* cierra la ventana de notificaciones al hacer click fuera de ella */
 document.addEventListener("click", function (ev) {

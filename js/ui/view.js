@@ -63,9 +63,21 @@ export function render() {
   cancelAnims();
   var main = document.getElementById("content");
   main.innerHTML = "";
+  var pvBoard = session.profileView ? session.profileView.boardId : session.currentView;
+  if (session.myProfileView) pvBoard = session.lastBoard;
+  if (session.currentView === "seguidos") pvBoard = session.lastBoard;
+  if (session.currentView === "notificaciones") pvBoard = session.lastBoard;
+
+  /* en movil los paneles laterales viven en drawers accesibles desde los
+     botones "Colab" (izquierdo) y "Foros" (derecho) de la barra superior */
+  var mcolab = document.getElementById("mobile-colab");
+  if (mcolab && mcolab.style.display !== "none") {
+    mcolab.innerHTML = "";
+    var sdDrawer = renderSidebar(pvBoard);
+    sdDrawer.className = sdDrawer.className.replace(/\bsidebar\b/, "sidebar mobile-sd");
+    mcolab.appendChild(sdDrawer);
+  }
   var mrap = document.getElementById("mobile-rap");
-  /* en movil el panel derecho (foros/recomendados/secciones) vive en un drawer
-     accesible desde el boton "Foros" de la barra superior */
   if (mrap && mrap.style.display !== "none") {
     mrap.innerHTML = "";
     var rpDrawer = renderRightPanel();
@@ -79,10 +91,6 @@ export function render() {
     main.classList.add("wide");
     var layout = document.createElement("div");
     layout.className = "layout";
-    var pvBoard = session.profileView ? session.profileView.boardId : session.currentView;
-    if (session.myProfileView) pvBoard = session.lastBoard;
-    if (session.currentView === "seguidos") pvBoard = session.lastBoard;
-    if (session.currentView === "notificaciones") pvBoard = session.lastBoard;
     layout.appendChild(renderSidebar(pvBoard));
     var col = document.createElement("div");
     col.className = "main";
