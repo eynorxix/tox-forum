@@ -317,18 +317,8 @@ export function renderMyProfile() {
   back.className = "back-btn";
   back.textContent = "← Volver al foro";
   back.addEventListener("click", function () { navTo(session.lastBoard); });
-  var settingsBtn = document.createElement("a");
-  settingsBtn.className = "btn2 settings-btn";
-  settingsBtn.textContent = "Configuracion";
-  settingsBtn.title = "Editar perfil, claves, redes y foros";
-  settingsBtn.href = "#";
-  settingsBtn.addEventListener("click", function (ev) {
-    ev.preventDefault();
-    openSettings();
-  });
   backRow.appendChild(back);
   if (me.pubHex) backRow.appendChild(shareButton(me.pubHex));
-  backRow.appendChild(settingsBtn);
 
   var head = document.createElement("div");
   head.className = "profile-head";
@@ -362,7 +352,7 @@ export function renderMyProfile() {
   wrap.appendChild(backRow);
   wrap.appendChild(head);
 
-  /* ---- barra /Publico/ | /Mis-publicaciones/ (las publicaciones solo las ve el dueno) ---- */
+  /* ---- barra /Publico/ | /Mis-publicaciones/ | Configuracion ---- */
   var tabs = document.createElement("div");
   tabs.className = "profile-tabs";
   var tabPub = document.createElement("button");
@@ -373,8 +363,14 @@ export function renderMyProfile() {
   tabMine.type = "button";
   tabMine.className = "profile-tab";
   tabMine.textContent = "/Mis-publicaciones/";
+  var tabCfg = document.createElement("button");
+  tabCfg.type = "button";
+  tabCfg.className = "profile-tab";
+  tabCfg.textContent = "Configuracion";
+  tabCfg.title = "Editar perfil, claves, redes y foros";
   tabs.appendChild(tabPub);
   tabs.appendChild(tabMine);
+  tabs.appendChild(tabCfg);
 
   var pPub = document.createElement("div");
   pPub.className = "profile-tabpanel active";
@@ -540,6 +536,7 @@ export function renderMyProfile() {
   }
   tabPub.addEventListener("click", function () { swap("pub"); });
   tabMine.addEventListener("click", function () { swap("mine"); });
+  tabCfg.addEventListener("click", function () { openSettings(); });
   swap("pub");
 
   return wrap;
