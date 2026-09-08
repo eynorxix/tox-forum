@@ -78,8 +78,9 @@ function makeCryptoCard(name, qrFile, addr) {
 
 /* construye un layout fijo (no retractil) que lista foros en 4 columnas con
    scroll interno, con buscador + autocompletar. items = [{id, name}].
-   limitFilas: si es >0, el grid se recorta a ese numero de filas (4 cols). */
-function buildForosLayout(label, items, limitFilas) {
+   limitFilas: si es >0, el grid se recorta a ese numero de filas (4 cols).
+   clsExtra: clase css adicional para el grid (p.ej. "rp-recom" en recomendados). */
+function buildForosLayout(label, items, limitFilas, clsExtra) {
   var lay = document.createElement("section");
   lay.className = "rp-section rp-fixed";
 
@@ -104,7 +105,8 @@ function buildForosLayout(label, items, limitFilas) {
   body.appendChild(searchWrap);
 
   var grid = document.createElement("div");
-  grid.className = "rp-grid" + (limitFilas ? " rp-grid-limit" : "");
+  grid.className = "rp-grid" + (limitFilas ? " rp-grid-limit" : "") +
+    (clsExtra ? " " + clsExtra : "");
   if (limitFilas) grid.style.setProperty("--rows", String(limitFilas));
 
   function renderGrid(query) {
@@ -244,7 +246,7 @@ export function renderRightPanel() {
       recItems.push({ id: f.id, name: f.name });
     }
   });
-  var layRec = buildForosLayout("Foros Recomendados", recItems, 4);
+  var layRec = buildForosLayout("Foros Recomendados", recItems, 4, "rp-recom");
 
   /* ---- 3) secciones retractiles (Redes, Donar, Colaborar) ---- */
   var layRedes = mkLayout("Redes", false);

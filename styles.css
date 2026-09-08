@@ -350,7 +350,7 @@ a:visited { color: var(--link-visited); }
   padding: 0;
 }
 .recom-grid a {
-  color: var(--red);
+  color: #73daca;
   text-decoration: none;
   font-size: 14px;
   white-space: nowrap;
@@ -359,7 +359,7 @@ a:visited { color: var(--link-visited); }
   padding: 2px 10px;
 }
 .recom-grid a:hover { text-decoration: underline; background: var(--bg); }
-.recom-grid a b { font-family: "Courier New", monospace; color: var(--red); }
+.recom-grid a b { font-family: "Courier New", monospace; color: #73daca; }
 .cat-grid {
   list-style: none;
   display: grid;
@@ -369,9 +369,9 @@ a:visited { color: var(--link-visited); }
   padding: 0;
 }
 .cat-item { padding: 2px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cat-item a { color: var(--red); text-decoration: none; font-size: 14px; }
+.cat-item a { color: var(--link); text-decoration: none; font-size: 14px; }
 .cat-item a:hover { text-decoration: underline; }
-.cat-item a b { font-family: "Courier New", monospace; color: var(--red); }
+.cat-item a b { font-family: "Courier New", monospace; color: var(--link); }
 .cat-item a small { color: var(--muted); }
 
 .board-list {
@@ -922,7 +922,7 @@ textarea::placeholder {
 }
 .rp-grid-limit { max-height: 260px; overflow-y: auto; }
 .rp-grid a {
-  color: var(--red);
+  color: var(--link);
   text-decoration: none;
   font-size: 12px;
   white-space: nowrap;
@@ -932,6 +932,8 @@ textarea::placeholder {
 }
 .rp-grid a:hover { text-decoration: underline; background: var(--bg); }
 .rp-grid a b { font-family: "Courier New", monospace; }
+.rp-grid.rp-recom a { color: #73daca; }
+.rp-grid.rp-recom a b { color: #73daca; }
 .rp-apos { font-size: 12px; color: var(--muted); margin: 4px 0 6px; }
 .rp-ac {
   position: absolute;
