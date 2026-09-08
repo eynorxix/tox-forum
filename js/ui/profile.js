@@ -127,14 +127,21 @@ function openShareProfile(pubHex) {
   p.className = "share-info";
   p.textContent = "Este enlace muestra el perfil publico del usuario: sus redes sociales, descripcion y foros creados. Puedes compartirlo donde quieras.";
   win.appendChild(p);
-  var row = document.createElement("div");
-  row.className = "share-row";
+
+  /* fila 1: el enlace a compartir (input de ancho completo) */
+  var urlRow = document.createElement("div");
+  urlRow.className = "share-url";
   var inp = document.createElement("input");
   inp.type = "text";
   inp.className = "settings-input";
   inp.readOnly = true;
   inp.value = url;
-  row.appendChild(inp);
+  urlRow.appendChild(inp);
+  win.appendChild(urlRow);
+
+  /* fila 2: botones (copiar + abrir en otra pestana) */
+  var btns = document.createElement("div");
+  btns.className = "share-btns";
   var copyBtn = document.createElement("button");
   copyBtn.type = "button";
   copyBtn.className = "btn2";
@@ -151,8 +158,7 @@ function openShareProfile(pubHex) {
       setTimeout(function () { copyBtn.textContent = "Copiar"; }, 1500);
     }
   });
-  row.appendChild(copyBtn);
-  win.appendChild(row);
+  btns.appendChild(copyBtn);
   var openBtn = document.createElement("button");
   openBtn.type = "button";
   openBtn.className = "btn2 share-open";
@@ -160,7 +166,8 @@ function openShareProfile(pubHex) {
   openBtn.addEventListener("click", function () {
     window.open(url, "_blank", "noopener");
   });
-  win.appendChild(openBtn);
+  btns.appendChild(openBtn);
+  win.appendChild(btns);
   box.appendChild(win);
   box.addEventListener("click", function (ev) {
     if (ev.target === box) box.remove();

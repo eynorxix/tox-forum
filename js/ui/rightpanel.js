@@ -219,28 +219,9 @@ export function renderRightPanel() {
   var forosItems = BOARDS.map(function (b) { return { id: b.id, name: b.name }; });
   var layForos = buildForosLayout("Foros", forosItems, 0);
 
-  /* ---- 2) foros recomendados (4 col, no retractil, limite 4 filas, scroll) ---- */
-  var recItems = [
-    { id: "or", name: "Origen y Misterio" },
-    { id: "gz", name: "Gamer Zone" },
-    { id: "ch", name: "Cocina en Casa" },
-    { id: "mo", name: "Moda Urbana" },
-    { id: "ca", name: "Cafe y Radar" },
-    { id: "mu", name: "Musica Independiente" },
-    { id: "de", name: "Diseño y Pixel" },
-    { id: "pa", name: "Paranormal" },
-    { id: "ci", name: "Ciencia y Futuro" },
-    { id: "an2", name: "Anime Retro" },
-    { id: "fo", name: "Fotografia" },
-    { id: "de2", name: "Deep Web y Ciber" },
-    { id: "re", name: "Relatos y Cuentos" },
-    { id: "mi", name: "Minerales y Rocas" },
-    { id: "ga", name: "Gatitos" },
-    { id: "ho", name: "Hogar y DIY" },
-    { id: "es", name: "Espiritualidad" },
-    { id: "na", name: "Naturaleza" }
-  ];
-  /* agrega los foros creados por los usuarios del navegador */
+/* ---- 2) foros recomendados (4 col, no retractil, limite 4 filas, scroll) ---- */
+  var recItems = [];
+  /* solo los foros creados por los usuarios del navegador (sin foros demo) */
   getCreatedForums().forEach(function (f) {
     if (!recItems.some(function (r) { return r.id === f.id; })) {
       recItems.push({ id: f.id, name: f.name });

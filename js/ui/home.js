@@ -3,9 +3,10 @@
    de cada categoria, los boards repartidos en 4 columnas fijas (filas
    ilimitadas). Cada celda muestra solo "/tag/ - Nombre" sin descripcion. */
 import { BOARDS, CATEGORIES } from "../config.js";
-import { state, getBoard, getCreatedForums } from "../store/db.js";
+import { state, getBoard, getCreatedForums, followingList } from "../store/db.js";
 import { openProfile } from "./appshell.js";
 import { isBanned } from "../store/moderation.js";
+import { approvedPubkeys, collabProfile, fetchCollabProfile } from "../store/collabs.js";
 
 export function renderHome() {
   var wrap = document.createElement("div");
@@ -67,6 +68,7 @@ export function renderHome() {
   search.placeholder = "Buscar foro o usuario...";
   var results = document.createElement("div");
   results.className = "search-results";
+  var resolvedPending = {}; /* hexes ya pedidos a relays para no repetir */
   search.addEventListener("input", function () {
     var q = search.value.trim().toLowerCase();
     results.innerHTML = "";
@@ -80,21 +82,50 @@ export function renderHome() {
         results.appendChild(row);
       }
     });
+
+    /* candidatos a usuario: registrados locales + colaboradores aprobados +
+       seguidos (siempre que no esten baneados) */
+    var cands = {};
+    var pendingResolve = [];
     Object.keys(state.users || {}).forEach(function (pubHex) {
       var u = state.users[pubHex];
       if (!u) return;
+      if (!cands[pubHex]) cands[pubHex] = { pubHex: pubHex, name: u.name || pubHex.slice(0, 8), icon: u.icon || null };
+    });
+    approvedPubkeys().forEach(function (hex) {
+      var p = collabProfile(hex);
+      if (!cands[hex]) cands[hex] = { pubHex: hex, name: p.name || hex.slice(0, 8), icon: p.picture || null };
+      if (!resolvedPending[hex] && (!p || !p.name || p.name.indexOf(hex.slice(0, 8)) === 0)) pendingResolve.push(hex);
+    });
+    followingList().forEach(function (hex) {
+      if (!hex) return;
+      var p = collabProfile(hex);
+      if (!cands[hex]) cands[hex] = { pubHex: hex, name: p.name || hex.slice(0, 8), icon: p.picture || null };
+      if (!resolvedPending[hex] && (!p || !p.name || p.name.indexOf(hex.slice(0, 8)) === 0)) pendingResolve.push(hex);
+    });
+    Object.keys(cands).forEach(function (pubHex) {
+      var u = cands[pubHex];
       if (isBanned(u.pubHex)) return;
-      var hay = ((u.name || "") + " " + (u.npub || "")).toLowerCase();
-      if (hay.indexOf(q) >= 0) {
-        var row = document.createElement("div");
-        row.className = "sr-user";
-        var nm = document.createElement("span");
-        nm.className = "collab-name";
-        nm.textContent = u.name;
-        row.appendChild(nm);
-        row.addEventListener("click", function () { openUser(u); });
-        results.appendChild(row);
-      }
+      var hay = (u.name || "").toLowerCase();
+      if (hay.indexOf(q) < 0) return;
+      var row = document.createElement("div");
+      row.className = "sr-user";
+      var nm = document.createElement("span");
+      nm.className = "collab-name";
+      nm.textContent = u.name;
+      row.appendChild(nm);
+      row.addEventListener("click", function () { openUser(u); });
+      results.appendChild(row);
+    });
+    /* si hay perfiles con placeholder (nombre = hex corto), pidelos a los
+       relays una sola vez; al llegar re-ejecuta la busqueda con el nombre real */
+    pendingResolve.forEach(function (hex) {
+      resolvedPending[hex] = true;
+      fetchCollabProfile(hex).then(function () {
+        if (document.body.contains(search) && search.value.trim()) {
+          search.dispatchEvent(new Event("input"));
+        }
+      }).catch(function () {});
     });
   });
   searchWrap.appendChild(search);
@@ -155,33 +186,14 @@ export function renderHome() {
   recomTitle.textContent = "Recomendaciones";
   recom.appendChild(recomTitle);
 
-  var items = [
-    { id: "or", name: "Origen y Misterio" },
-    { id: "gz", name: "Gamer Zone" },
-    { id: "ch", name: "Cocina en Casa" },
-    { id: "mo", name: "Moda Urbana" },
-    { id: "ca", name: "Cafe y Radar" },
-    { id: "mu", name: "Musica Independiente" },
-    { id: "de", name: "Diseño y Pixel" },
-    { id: "pa", name: "Paranormal" },
-    { id: "ci", name: "Ciencia y Futuro" },
-    { id: "an2", name: "Anime Retro" },
-    { id: "fo", name: "Fotografia" },
-    { id: "de2", name: "Deep Web y Ciber" },
-    { id: "re", name: "Relatos y Cuentos" },
-    { id: "mi", name: "Minerales y Rocas" },
-    { id: "ga", name: "Gatitos" },
-    { id: "ho", name: "Hogar y DIY" },
-    { id: "es", name: "Espiritualidad" },
-    { id: "na", name: "Naturaleza" }
-  ];
-  /* agrega los foros creados por los usuarios del navegador (misma fuente
-     que el panel derecho "Foros Recomendados") */
+  var items = [];
+  /* solo foros creados por los usuarios del navegador (sin foros demo) */
   getCreatedForums().forEach(function (f) {
     if (!items.some(function (r) { return r.id === f.id; })) {
       items.push({ id: f.id, name: f.name });
     }
   });
+  if (!items.length) return wrap;
 
   /* buscador que filtra la grilla de recomendaciones */
   var recomSearch = document.createElement("div");

@@ -369,9 +369,9 @@ a:visited { color: var(--link-visited); }
   padding: 0;
 }
 .cat-item { padding: 2px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cat-item a { color: var(--link); text-decoration: none; font-size: 14px; }
+.cat-item a { color: #DBE079; text-decoration: none; font-size: 14px; }
 .cat-item a:hover { text-decoration: underline; }
-.cat-item a b { font-family: "Courier New", monospace; color: var(--link); }
+.cat-item a b { font-family: "Courier New", monospace; color: #DBE079; }
 .cat-item a small { color: var(--muted); }
 
 .board-list {
@@ -391,7 +391,7 @@ a:visited { color: var(--link-visited); }
   background: var(--bg);
   text-decoration: none;
 }
-.board-list a b { color: var(--red); font-family: "Courier New", monospace; }
+.board-list a b { color: #DBE079; font-family: "Courier New", monospace; }
 .board-list a small { color: var(--muted); }
 
 /* ---- formulario de posteo ---- */
@@ -789,6 +789,17 @@ textarea::placeholder {
   cursor: pointer;
   border-bottom: 1px dotted var(--border);
 }
+.side-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+}
+.sidebar-following .side-search { margin-top: 4px; }
 .collab-item:hover { background: var(--bg); }
 .collab-item img {
   width: 36px;
@@ -922,7 +933,7 @@ textarea::placeholder {
 }
 .rp-grid-limit { max-height: 260px; overflow-y: auto; }
 .rp-grid a {
-  color: var(--link);
+  color: #DBE079;
   text-decoration: none;
   font-size: 12px;
   white-space: nowrap;
@@ -1883,9 +1894,10 @@ textarea::placeholder {
 }
 /* ===== modal de compartir perfil (usa estructura settings) ===== */
 .share-info { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
-.share-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.share-row input[type="text"] { flex: 1; min-width: 0; }
-.share-open { display: block; width: 100%; margin-bottom: 8px; text-align: left; }
+.share-url { margin-bottom: 12px; }
+.share-url input[type="text"] { width: 100%; box-sizing: border-box; }
+.share-btns { display: flex; flex-direction: column; gap: 8px; }
+.share-btns .btn2 { width: 100%; text-align: center; }
 .share-btn { border-color: var(--teal); color: var(--teal); }
 .share-btn:hover { background: var(--teal); color: #16161e; }
 

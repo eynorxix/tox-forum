@@ -23,9 +23,24 @@ export function renderSidebar(boardId) {
   var clip = document.createElement("div");
   clip.className = "collab-list";
 
+  /* buscador de colaboradores por nombre */
+  var colabSearch = document.createElement("input");
+  colabSearch.type = "text";
+  colabSearch.className = "side-search";
+  colabSearch.placeholder = "Buscar colaborador...";
+  colabSearch.addEventListener("input", function () {
+    var q = colabSearch.value.trim().toLowerCase();
+    clip.querySelectorAll(".collab-item").forEach(function (it) {
+      var nm = it.getAttribute("data-name") || "";
+      it.style.display = (!q || nm.toLowerCase().indexOf(q) >= 0) ? "" : "none";
+    });
+  });
+  aside.appendChild(colabSearch);
+
   if (inMain) {
     var myItem = document.createElement("div");
     myItem.className = "collab-item";
+    myItem.setAttribute("data-name", me.name || "");
     if (isAdminRole(me.pubHex)) myItem.classList.add("collab-admin");
     else if (isCollabByAdmin(me.pubHex)) myItem.classList.add("collab-collab");
     if (me.icon) {
@@ -56,6 +71,7 @@ export function renderSidebar(boardId) {
   collabsHere.forEach(function (u) {
     var item = document.createElement("div");
     item.className = "collab-item";
+    item.setAttribute("data-name", u.name || "");
     if (isAdminRole(u.pubHex)) item.classList.add("collab-admin");
     else if (isCollabByAdmin(u.pubHex)) item.classList.add("collab-collab");
     var ic;
@@ -106,7 +122,21 @@ export function renderSidebar(boardId) {
     h2fol.innerHTML = 'Seguidos <span class="collab-count">(' + following.length + ')</span>';
     var folClip = document.createElement("div");
     folClip.className = "collab-list";
+
+    /* buscador de seguidos por nombre */
+    var folSearch = document.createElement("input");
+    folSearch.type = "text";
+    folSearch.className = "side-search";
+    folSearch.placeholder = "Buscar seguido...";
+    folSearch.addEventListener("input", function () {
+      var q = folSearch.value.trim().toLowerCase();
+      folClip.querySelectorAll(".collab-item").forEach(function (it) {
+        var nm = it.getAttribute("data-name") || "";
+        it.style.display = (!q || nm.toLowerCase().indexOf(q) >= 0) ? "" : "none";
+      });
+    });
     sec.appendChild(h2fol);
+    sec.appendChild(folSearch);
     sec.appendChild(folClip);
 
     var byHex = {};
@@ -117,6 +147,7 @@ export function renderSidebar(boardId) {
       var item = document.createElement("div");
       item.className = "collab-item follow-item";
       if (known) {
+        item.setAttribute("data-name", known.name || "");
         var icK;
         if (known.icon) {
           icK = document.createElement("img");
@@ -145,7 +176,8 @@ export function renderSidebar(boardId) {
           });
         });
       } else {
-        resolveFollowedItem(item, ph, boardId);
+        item.setAttribute("data-name", "");
+        resolveFollowedItem(item, ph, boardId, folSearch);
       }
       folClip.appendChild(item);
     });
@@ -157,8 +189,9 @@ export function renderSidebar(boardId) {
 }
 
 /* resuelve el perfil (nombre/avatar/desc) de un seguido desde relays y rellena
-   el item del sidebar. Devuelve el item para que se pueda anexar ya con datos. */
-function resolveFollowedItem(item, pubHex, boardId) {
+   el item del sidebar. Devuelve el item para que se pueda anexar ya con datos.
+   Si el nombre llega tarde y hay un buscador activo, reaplica su filtro. */
+function resolveFollowedItem(item, pubHex, boardId, followSearch) {
   var phEl = document.createElement("span");
   phEl.className = "collab-ph";
   phEl.textContent = (pubHex || "?").slice(0, 1).toUpperCase();
@@ -167,12 +200,18 @@ function resolveFollowedItem(item, pubHex, boardId) {
   nmU.textContent = "…";
   item.appendChild(phEl);
   item.appendChild(nmU);
+  var reapply = function () {
+    if (followSearch && document.body.contains(followSearch)) {
+      followSearch.dispatchEvent(new Event("input"));
+    }
+  };
   item.addEventListener("click", function () {
     openProfile(boardId, { pubHex: pubHex, name: nmU.textContent, icon: null, desc: null, posts: [], socials: [] });
   });
   fetchCollabProfile(pubHex).then(function (p) {
     if (p) {
       nmU.textContent = p.name || pubHex.slice(0, 8);
+      item.setAttribute("data-name", p.name || pubHex.slice(0, 8));
       if (p.picture) {
         var im = document.createElement("img");
         im.src = p.picture;
@@ -180,9 +219,11 @@ function resolveFollowedItem(item, pubHex, boardId) {
         im.loading = "lazy";
         phEl.replaceWith(im);
       }
+      reapply();
     }
   }).catch(function () {
     nmU.textContent = pubHex.slice(0, 8);
+    item.setAttribute("data-name", pubHex.slice(0, 8));
   });
   return item;
 }
