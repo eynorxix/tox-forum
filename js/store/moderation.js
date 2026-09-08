@@ -45,6 +45,12 @@ export function isCollabByAdmin(pubHex) {
 export function isAdmin(pubHex) {
   return getRole(pubHex) === "admin";
 }
+/* colaborador o admin aprobado por el admin: puede crear foros.
+   El propio ADMIN_NPUB (clave del panel) siempre se considera staff, aunque
+   todavia no se haya publicado a si mismo un rol en el evento 39001. */
+export function isStaff(pubHex) {
+  return !!(pubHex && (isAdmin(pubHex) || isCollabByAdmin(pubHex) || pubHex === adminHex));
+}
 /* todos los colaboradores aprobados por el admin (role collab, no baneados).
    Devuelve array de { role, status } con pubkeys. */
 export function collabsByAdmin() {

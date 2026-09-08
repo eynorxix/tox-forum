@@ -45,11 +45,6 @@ export function renderSidebar(boardId) {
       aTag.className = "collab-tag";
       aTag.textContent = "Admin";
       myItem.appendChild(aTag);
-    } else if (isCollabByAdmin(me.pubHex)) {
-      var cTag = document.createElement("span");
-      cTag.className = "collab-tag";
-      cTag.textContent = "Colab";
-      myItem.appendChild(cTag);
     }
     myItem.addEventListener("click", function () { openMine(); });
     clip.appendChild(myItem);
@@ -81,11 +76,6 @@ export function renderSidebar(boardId) {
       aTag2.className = "collab-tag";
       aTag2.textContent = "Admin";
       item.appendChild(aTag2);
-    } else if (isCollabByAdmin(u.pubHex)) {
-      var cTag2 = document.createElement("span");
-      cTag2.className = "collab-tag";
-      cTag2.textContent = "Colab";
-      item.appendChild(cTag2);
     }
     item.addEventListener("click", function () {
       var posts = postsByAuthor(u.pubHex);

@@ -2,6 +2,7 @@
    Agrupa en un solo lugar: editar perfil, claves (nsec/npub) y foros.
    El perfil publico solo muestra avatar, nombre, descripcion, publicar y posts. */
 import { getMe, save, logout, createForum, renameForum, setForumStatus, deleteForum, getCreatedForums } from "../store/db.js";
+import { isStaff, isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
 import { fileToDataURL, toast } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
@@ -37,10 +38,12 @@ export function openSettings() {
   head.appendChild(close);
   win.appendChild(head);
 
-  /* pestanas: Perfil | Claves | Foros */
+  /* pestanas: Perfil | Claves | Foros (Foros solo para colaboradores/admin) */
+  var canForos = !!(me && isStaff(me.pubHex) && !isBanned(me.pubHex));
   var tabs = document.createElement("div");
   tabs.className = "settings-tabs";
-  var labels = [["perfil", "Editar perfil"], ["claves", "Claves"], ["foros", "Foros"]];
+  var labels = [["perfil", "Editar perfil"], ["claves", "Claves"]];
+  if (canForos) labels.push(["foros", "Foros"]);
   var panels = {};
   labels.forEach(function (L) {
     var b = document.createElement("button");
@@ -202,7 +205,7 @@ export function openSettings() {
 
   var info = document.createElement("p");
   info.className = "fo-info";
-  info.textContent = "Aqui administras tus foros creados: puedes crear un foro, editar su nombre, cambiar su estado (libre o restringido) o eliminarlo. Maximo 3 foros por usuario.";
+  info.textContent = "Aqui administras tus foros creados: puedes crear un foro, editar su nombre, cambiar su estado (libre o restringido) o eliminarlo. Maximo 3 foros por usuario. Los foros se publican en relays para que todos los visitantes los vean.";
   pForos.appendChild(info);
 
   /* formulario de creacion */
@@ -221,6 +224,10 @@ export function openSettings() {
       toast("Debes tener una cuenta para crear foros.", "warn");
       return;
     }
+    if (!isStaff(getMe().pubHex)) {
+      toast("Solo los colaboradores aprobados por el administrador pueden crear foros.", "warn");
+      return;
+    }
     var mine = getCreatedForums().filter(function (f) { return getMe() && f.ownerPub === getMe().pubHex; });
     if (mine.length >= 3) {
       toast("Ya tienes el maximo de 3 foros", "warn");
@@ -229,9 +236,9 @@ export function openSettings() {
     var name = nameIn.value.trim();
     if (!name) { toast("Escribe un nombre para el foro", "warn"); return; }
     var f = createForum(name);
-    if (!f) { toast("No se pudo crear el foro", "err"); return; }
+    if (!f) { toast("No se pudo crear: solo los colaboradores aprobados pueden crear foros.", "err"); return; }
     nameIn.value = "";
-    toast("Foro /" + f.id + "/ creado y publicado en recomendados");
+    toast("Foro /" + f.id + "/ creado, publicado y disponible para todos");
     refreshForumList();
     refresh();
   });
@@ -361,9 +368,11 @@ export function openSettings() {
     rules.innerHTML = "<b>/libre/</b> los usuarios pueden postear &middot; <b>/restringido/</b> solo pueden ver pero no postear.";
     createdWrap.appendChild(rules);
   }
-  refreshForumList();
-  panels.foros = pForos;
-  win.appendChild(pForos);
+  if (canForos) {
+    refreshForumList();
+    panels.foros = pForos;
+    win.appendChild(pForos);
+  }
 
   /* cambio de pestana */
   tabs.addEventListener("click", function (ev) {
@@ -374,7 +383,7 @@ export function openSettings() {
   /* el grid de foros ejecuta sus propios handlers (toggle/promote); aqui solo
      re-renderizamos el grid de settings despues del cambio en db */
   win.addEventListener("click", function () {
-    if (panels.foros.classList.contains("active")) setTimeout(refreshForumList, 0);
+    if (canForos && panels.foros.classList.contains("active")) setTimeout(refreshForumList, 0);
   });
 
   function swapTab(name) {

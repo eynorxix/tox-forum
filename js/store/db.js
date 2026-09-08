@@ -1,8 +1,8 @@
 /* ===== capa de datos: estado persistente, identidad y acceso al almacen ===== */
 import { STORAGE_KEY, BOARDS } from "../config.js";
 import { importNsec, activateFromB64, clearActiveKeys } from "../utils/nostr.js";
-import { fetchNames, publishProfile } from "../utils/relays.js";
-import { isBanned } from "./moderation.js";
+import { fetchNames, publishProfile, publishForum, fetchForums } from "../utils/relays.js";
+import { isBanned, isStaff } from "./moderation.js";
 
 export var state = load();
 if (!state || !state.counter) state = { counter: 1, boards: {} };
@@ -421,6 +421,38 @@ export function getCreatedForums() {
   return state.createdForums.slice();
 }
 
+/* foros creados por OTROS colaboradores, bajados de los relays (kind 13371):
+   se fusionan en state.createdForums (como foros "externos") y en BOARDS para
+   que se navegar y aparezcan en recomendados. ownerPub=null no se toca. */
+export function mergeRemoteForums(list) {
+  if (!Array.isArray(list) || !list.length) return;
+  var changed = false;
+  list.forEach(function (f) {
+    if (!f || !f.id) return;
+    var known = (state.createdForums || []).find(function (x) { return x.id === f.id; });
+    if (known) {
+      if (known.ownerPub && known.ownerPub !== f.ownerPub) return; /* id ocupado localmente */
+      if (known.name !== f.name) { known.name = f.name; changed = true; }
+      if (known.status !== f.status) { known.status = f.status; changed = true; }
+    } else {
+      state.createdForums.push({
+        id: f.id,
+        name: f.name,
+        status: f.status || "libre",
+        ownerPub: f.ownerPub || null,
+        ownerName: f.ownerName || "",
+        createdAt: (f.created_at || 0) * 1000,
+        remote: true
+      });
+      changed = true;
+    }
+  });
+  if (changed) {
+    save();
+    syncBoardsFromCreated();
+  }
+}
+
 function catOfCreated() { return "Otros"; }
 
 function syncBoardsFromCreated() {
@@ -443,6 +475,8 @@ function createdIdUsed(id) {
 export function createForum(name) {
   var me = state.me;
   if (!me || !me.pubHex) return null;
+  /* solo colaboradores o admins aprobados por el admin pueden crear foros */
+  if (!isStaff(me.pubHex)) return null;
   var mine = state.createdForums.filter(function (f) { return f.ownerPub === me.pubHex; });
   if (mine.length >= 3) return null; /* maximo 3 foros por usuario */
   var n = state.createdForums.length + 1 + Math.floor(Math.random() * 100);
@@ -453,11 +487,19 @@ export function createForum(name) {
     name: (name || "Mi foro").trim() || "Mi foro",
     status: "libre",
     ownerPub: me.pubHex,
+    ownerName: me.name || "",
     createdAt: Date.now()
   };
   state.createdForums.push(f);
   save();
   syncBoardsFromCreated();
+  /* publica en los relays para que TODOS los visitantes (otro navegador, ventana
+     privada) puedan ver /navegar el foro en "Foros Recomendados". */
+  if (me.sec) {
+    publishForum(f).then(function (ok) {
+      if (ok > 0) console.log("[foros] /" + f.id + "/ publicado en relays (" + ok + ")");
+    }).catch(function () {});
+  }
   return f;
 }
 
@@ -467,6 +509,9 @@ export function renameForum(id, name) {
   f.name = (name || "").trim() || f.name;
   save();
   syncBoardsFromCreated();
+  if (state.me && state.me.sec) {
+    publishForum(f).then(function () {}).catch(function () {});
+  }
   return true;
 }
 
@@ -475,6 +520,9 @@ export function setForumStatus(id, status) {
   if (!f) return false;
   f.status = (status === "restringido") ? "restringido" : "libre";
   save();
+  if (state.me && state.me.sec) {
+    publishForum(f).then(function () {}).catch(function () {});
+  }
   return true;
 }
 

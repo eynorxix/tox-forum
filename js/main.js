@@ -14,6 +14,9 @@ import { acHide, isAcOpen } from "./utils/autocomplete.js";
 import { closeGifPicker, isGifPickerOpen } from "./ui/gifpicker.js";
 import { ensureBanInit, setBansRefresh } from "./store/moderation.js";
 import { setCollabsLoaded } from "./store/collabs.js";
+import { mergeRemoteForums } from "./store/db.js";
+import { fetchForums } from "./utils/relays.js";
+import { BOARDS } from "./config.js";
 import {
   closeNotifications, isNotifOpen, refreshNotifBadge,
   closeSaved, isSavedOpen, syncFollowedNotifications, scanReplyNotifications
@@ -177,6 +180,19 @@ ensureBanInit();
 /* cuando llegan los perfiles (avatar/nombre) de los colaboradores aprobados
    por el admin, se re-renderiza el sidebar para mostrarlos */
 setCollabsLoaded(render);
+
+/* foros creados por colaboradores (kind 13371): se traen de los relays para
+   que TODOS los visitantes (aunque sea ventana privada) los vean en
+   "Foros Recomendados" y en la navegacion. Si llegan nuevos, re-renderiza. */
+fetchForums().then(function (list) {
+  if (!list || !list.length) return;
+  var before = BOARDS.length;
+  mergeRemoteForums(list);
+  if (BOARDS.length !== before) {
+    render();
+    refreshChip();
+  }
+}).catch(function () {});
 
 renderNav();
 refreshChip();

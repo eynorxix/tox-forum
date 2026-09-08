@@ -17,7 +17,7 @@
    La UI (boards 4chan) NO cambia; solo cambia como se guarda/lee el historial. */
 import { loadNostrLib } from "./nostr-lib.js";
 import { getActiveSec } from "./nostr.js";
-import { REG_KIND, REG_DTAG } from "../config.js";
+import { REG_KIND, REG_DTAG, FORUM_KIND, FORUM_DTAG } from "../config.js";
 
 export const RELAYS = [
   "wss://relay.damus.io",
@@ -140,6 +140,26 @@ export function publishRegistration(input) {
     updated_at: now
   });
   return pubWithRetry({ kind: REG_KIND, created_at: now, tags: tags, content: content });
+}
+
+/* publica un foro creado por un colaborador (kind 13371, addressable por foro).
+   input: { id, name, status, ownerName }. Firmado por el creador (clave activa). */
+export function publishForum(input) {
+  var now = Math.floor(Date.now() / 1000);
+  var tags = [
+    ["d", FORUM_DTAG + ":" + input.id],
+    ["t", "forosraiz"],
+    ["board", input.id]
+  ];
+  var content = JSON.stringify({
+    v: 1,
+    id: input.id,
+    name: input.name || "",
+    status: input.status || "libre",
+    ownerName: input.ownerName || "",
+    created_at: now
+  });
+  return pubWithRetry({ kind: FORUM_KIND, created_at: now, tags: tags, content: content });
 }
 
 /* ---------- consultas (lectura de vuelta) ---------- */
@@ -385,4 +405,42 @@ export function fetchProfiles(pubkeys) {
       unique.forEach(function (hex) { out[hex] = { name: hex.slice(0, 8), picture: null }; });
       return out;
     });
+}
+
+/* todos los foros creados por colaboradores (kind 13371) publicados en los
+   relays. Cada evento addressable tiene #d 'forosraiz-forum-v1:<id>'; se toma
+   el mas reciente por foro. Devuelve Promise<array de {id,name,status,ownerName,
+   ownerPub,created_at}> (los mas recientes de cada autor/foro). */
+export function fetchForums() {
+  return queryEvents({ kinds: [FORUM_KIND], limit: 200 }, { maxWait: 8000 })
+    .then(function (events) {
+      var newestPerForum = {};
+      events.forEach(function (ev) {
+        var dTag = (ev.tags || []).find(function (t) { return t[0] === "d"; });
+        var id = dTag ? dTag[1] : null;
+        if (!id || id.indexOf(FORUM_DTAG + ":") !== 0) return;
+        var forumId = id.slice(FORUM_DTAG.length + 1);
+        var prev = newestPerForum[forumId];
+        if (prev && ev.created_at < prev.created_at) return;
+        newestPerForum[forumId] = ev;
+      });
+      var out = [];
+      Object.keys(newestPerForum).forEach(function (fid) {
+        var ev = newestPerForum[fid];
+        var data = null;
+        try { data = JSON.parse(ev.content || "{}"); } catch (e) {}
+        if (!data || !data.name) return;
+        out.push({
+          id: fid,
+          name: data.name,
+          status: data.status || "libre",
+          ownerName: data.ownerName || "",
+          ownerPub: ev.pubkey,
+          created_at: data.created_at || ev.created_at || 0
+        });
+      });
+      out.sort(function (a, b) { return (b.created_at || 0) - (a.created_at || 0); });
+      return out;
+    })
+    .catch(function () { return []; });
 }

@@ -21,6 +21,13 @@ export var ROLE_DTAG = "forosraiz-roles-v1";
 export var BAN_KIND = 39000;   /* lista de baneados legacy */
 export var BAN_DTAG = "forosraiz-banlist-v1";
 
+/* kind de foros creados por colaboradores: cada foro se publica como evento
+   addressable #d 'forosraiz-forum-v1:<id>' firmado por su creador, para que
+   aparezca en "Foros Recomendados" y en la navegacion de TODOS los visitantes
+   (no solo en el navegador donde se creo). */
+export var FORUM_KIND = 13371;
+export var FORUM_DTAG = "forosraiz-forum-v1";
+
 export var CATEGORIES = [
   "General",
   "Tecnologia",
