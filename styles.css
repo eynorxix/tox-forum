@@ -7,61 +7,31 @@
 }
 
 :root {
-  color-scheme: light dark;
-  /* Tokyo Night Day (tema claro) — ver assets/tokyo-night-light.md */
-  --bg: #e1e2e7;            /* BG principal */
-  --bg-alt: #d0d5e3;        /* BG surf/alt */
-  --bg-flo: #c1c9df;        /* BG flotante/sidebar */
-  --bg-toolbar: #c1c9df;    /* BG_DARK1 / toolbar */
-  --bg-inset: #c4c8da;      /* BG resaltado */
-  --border: #b4b5b9;        /* borde general */
-  --text: #20242c;          /* texto principal: negro para legibilidad */
-  --text-side: #4b5f99;     /* texto secundario legible */
-  --comment: #848cb5;       /* comentarios */
-  --accent: #2e7de9;        /* azul acento principal */
-  --orange: #b15c00;
-  --yellow: #8c6c3e;
-  --green: #587539;
-  --teal: #118c74;
-  --cyan: #007197;
-  --blue: #2e7de9;
-  --purple: #7847bd;
-  --red: #f52a65;
+  color-scheme: dark;
+  /* Tokyo Night (tema oscuro) fijo — el tema claro se elimino */
+  --bg: #1a1b26;            /* BG_MAIN */
+  --bg-alt: #24283b;        /* BG_STORM */
+  --bg-flo: #1f2335;        /* BG flotante */
+  --bg-toolbar: #16161e;    /* BG_DARK */
+  --bg-inset: #2a2f45;      /* BG resaltado */
+  --border: rgba(86, 95, 137, 0.4);  /* linea suave */
+  --text: #c0caf5;          /* FG_MAIN */
+  --text-side: #a9b1d6;     /* FG_SIDE */
+  --comment: #565f89;       /* FG_COMMENT */
+  --accent: #f7768e;        /* NEON_RED */
+  --orange: #ff9e64;
+  --yellow: #e0af68;
+  --green: #9ece6a;
+  --teal: #73daca;
+  --cyan: #7dcfff;
+  --blue: #7aa2f7;
+  --purple: #bb9af7;
+  --red: #f7768e;
   --link: var(--blue);
   --link-visited: var(--purple);
-  --muted: var(--comment);
+  --muted: var(--text-side);
   --quote: var(--green);
-  --pink: #d63d6e;
-}
-
-/* si el navegador/sistema esta en modo oscuro (o una extension dark lo impone),
-   la pagina usa el tema Tokyo Night oscuro original en vez de arruinar el claro */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1b26;            /* BG_MAIN */
-    --bg-alt: #24283b;        /* BG_STORM */
-    --bg-flo: #1f2335;        /* BG flotante */
-    --bg-toolbar: #16161e;    /* BG_DARK */
-    --bg-inset: #2a2f45;      /* BG resaltado */
-    --border: rgba(86, 95, 137, 0.4);  /* linea suave */
-    --text: #c0caf5;          /* FG_MAIN */
-    --text-side: #a9b1d6;     /* FG_SIDE */
-    --comment: #565f89;       /* FG_COMMENT */
-    --accent: #f7768e;        /* NEON_RED */
-    --orange: #ff9e64;
-    --yellow: #e0af68;
-    --green: #9ece6a;
-    --teal: #73daca;
-    --cyan: #7dcfff;
-    --blue: #7aa2f7;
-    --purple: #bb9af7;
-    --red: #f7768e;
-    --link: var(--blue);
-    --link-visited: var(--purple);
-    --muted: var(--text-side);
-    --quote: var(--green);
-    --pink: #f7768e;
-  }
+  --pink: #f7768e;
 }
 
 body {
