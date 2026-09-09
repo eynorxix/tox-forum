@@ -2027,6 +2027,18 @@ textarea::placeholder {
 .settings-panel.active { display: block; }
 .settings-label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 .settings-label input[type="file"] { margin-top: 6px; }
+.settings-label-wrap { margin: 12px 0 4px; }
+.settings-label-wrap .settings-label { margin: 0 0 4px; }
+.settings-label-wrap .dropzone { margin-top: 4px; }
+.settings-label-wrap .dropzone-body { min-height: 0; padding: 10px; }
+.settings-label-wrap .dropzone-avatar .dropzone-body { justify-content: flex-start; }
+.settings-label-wrap .dropzone-avatar .dz-icon { font-size: 18px; }
+.settings-label-wrap .dropzone-avatar .dropzone-preview img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 50%;
+}
 .settings-input {
   width: 100%;
   padding: 8px 10px;

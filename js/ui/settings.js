@@ -4,7 +4,7 @@
 import { getMe, save, logout, createForum, renameForum, setForumStatus, deleteForum, getCreatedForums, mySocials, setSocials } from "../store/db.js";
 import { isStaff, isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
-import { fileToDataURL, toast } from "../utils/dom.js";
+import { fileToDataURL, toast, createDropzone } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishProfile } from "../utils/relays.js";
 import { refreshChip } from "./nav.js";
@@ -62,13 +62,23 @@ export function openSettings(startTab) {
   pPerfil.className = "settings-panel active";
   pPerfil.dataset.spanel = "perfil";
 
-  var rowAv = document.createElement("label");
-  rowAv.className = "settings-label";
-  rowAv.textContent = "Imagen de perfil";
+  var rowAv = document.createElement("div");
+  rowAv.className = "settings-label-wrap";
+  var labAv = document.createElement("label");
+  labAv.className = "settings-label";
+  labAv.textContent = "Imagen de perfil";
+  rowAv.appendChild(labAv);
   var inAv = document.createElement("input");
-  inAv.type = "file";
-  inAv.accept = "image/*";
-  rowAv.appendChild(inAv);
+  inAv.name = "avatar";
+  var dzAv = createDropzone(inAv, {
+    html: '<span class="dz-icon">&#8595;</span> Arrastra tu icono de perfil' +
+      '<small>o haz clic para elegir el icono desde tu equipo</small>',
+    maxWidth: "96px",
+    maxHeight: "96px",
+    className: "dropzone-avatar",
+    onPick: function () { /* el archivo queda en inAv.files[0] al guardar */ }
+  });
+  rowAv.appendChild(dzAv);
   pPerfil.appendChild(rowAv);
 
   var rowNm = document.createElement("label");
