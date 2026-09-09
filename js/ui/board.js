@@ -9,6 +9,7 @@ import { publishUserBoard } from "../utils/relay-sync.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
 import { refresh } from "./appshell.js";
+import { openProfileByPubHex } from "./view.js";
 import { likeButton } from "./activity.js";
 import { isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
@@ -335,6 +336,15 @@ function postHead(post) {
   var name = document.createElement("span");
   name.className = "name";
   name.textContent = post.name;
+  if (post.ownerType === "user" && post.ownerPub) {
+    name.classList.add("clickable");
+    name.title = "Ver perfil";
+    var hex = post.ownerPub;
+    name.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      openProfileByPubHex(hex);
+    });
+  }
   var no = document.createElement("span");
   no.className = "no";
   no.textContent = " No." + post.no;

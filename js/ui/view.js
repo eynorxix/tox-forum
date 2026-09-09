@@ -144,6 +144,7 @@ export function render() {
 }
 
 export function showProfile(boardId, user) {
+  session.myProfileView = false;
   session.profileView = { boardId: boardId, user: user };
   session.currentView = boardId;
   renderNav();

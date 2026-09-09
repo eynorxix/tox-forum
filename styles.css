@@ -552,6 +552,11 @@ button:hover, input[type=submit]:hover {
   color: var(--green);
   font-weight: bold;
 }
+.post-head .name.clickable {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.post-head .name.clickable:hover { color: var(--orange); }
 .post-head .no { color: var(--link); }
 .comment {
   margin-top: 3px;
