@@ -18,7 +18,7 @@ import { openImage } from "./lightbox.js";
 import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
-import { openGifPicker } from "./gifpicker.js";
+import { openGifPicker, gifDraft } from "./gifpicker.js";
 import { isBanned, isStaff } from "../store/moderation.js";
 
 function socialsEl(user) {
@@ -440,10 +440,18 @@ export function renderMyProfile() {
   qGif.className = "gif-btn";
   qGif.textContent = "Gifs";
   qGif.title = "Buscar y agregar GIFs como stickers";
+  var qGifUrl = null;
+  var qGifHost = document.createElement("div");
+  qGifHost.className = "gif-draft-host";
+  var qGifPrev = gifDraft(qGifHost, function () { qGifUrl = null; });
   qGif.addEventListener("click", function () {
-    openGifPicker(qTa);
+    openGifPicker(qTa, function (src) {
+      qGifUrl = src;
+      qGifPrev.set(src);
+    });
   });
   qAct.appendChild(qGif);
+  qWrap.appendChild(qGifHost);
   var qBtn = document.createElement("button");
   qBtn.type = "button";
   qBtn.textContent = "Publicar desde mi perfil";
@@ -463,7 +471,7 @@ export function renderMyProfile() {
     }
     var qtext = qTa.value.trim();
     var qfile = qImg.files ? qImg.files[0] : null;
-    if (!qtext && !qfile) return;
+    if (!qtext && !qfile && !qGifUrl) return;
     voteHashtags(qtext);
     var finishQ = function (image) {
       var thr = {
@@ -486,11 +494,11 @@ export function renderMyProfile() {
       refresh();
     };
     if (qfile) {
-      uploadImage(qfile, null).then(finishQ).catch(function () {
-        try { fileToDataURL(qfile, finishQ); } catch (e) { finishQ(null); }
+      uploadImage(qfile, null).then(function (u) { finishQ(u || qGifUrl || null); }).catch(function () {
+        try { fileToDataURL(qfile, function (du) { finishQ(du || qGifUrl || null); }); } catch (e) { finishQ(qGifUrl || null); }
       });
     } else {
-      finishQ(null);
+      finishQ(qGifUrl || null);
     }
   });
   pMine.appendChild(qWrap);

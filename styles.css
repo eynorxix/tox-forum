@@ -486,6 +486,39 @@ a:visited { color: var(--link-visited); }
 }
 .dropzone-clear:hover { filter: brightness(1.1); }
 
+/* ===== preview del GIF elegido (se publica como imagen, igual que la subida) ===== */
+.gif-draft-host { margin: 4px 0; min-height: 0; }
+.gif-draft {
+  position: relative;
+  display: inline-block;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-alt);
+}
+.gif-draft img {
+  display: block;
+  max-width: 220px;
+  max-height: 160px;
+  border-radius: 4px;
+}
+.gif-draft-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: var(--red);
+  color: #16161e;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.gif-draft-close:hover { filter: brightness(1.1); }
+
 button, input[type=submit] {
   border: 1px solid var(--border);
   background: var(--bg-alt);

@@ -15,7 +15,7 @@ import { refresh } from "./appshell.js";
 import { likeButton } from "./activity.js";
 import { isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
-import { openGifPicker } from "./gifpicker.js";
+import { openGifPicker, gifDraft } from "./gifpicker.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -229,7 +229,10 @@ function makePostForm(boardId, blockedForum) {
   labCom.textContent = "Comentario";
   tdCom1.appendChild(labCom);
   var tdCom2 = document.createElement("td");
-  tdCom2.innerHTML = '<textarea name="comment" placeholder="ESCRIBE TU POST... PARA OCULTAR URLS AGREGA DENTRO DE [...]" required></textarea>';
+  tdCom2.innerHTML = '<textarea name="comment" placeholder="ESCRIBE TU POST... (URL entre [...] para ocultarla; el GIF se publica como imagen)"></textarea>';
+  var gifHost = document.createElement("div");
+  gifHost.className = "gif-draft-host";
+  tdCom2.appendChild(gifHost);
   trCom.appendChild(tdCom1);
   trCom.appendChild(tdCom2);
   tbl.appendChild(trCom);
@@ -243,8 +246,13 @@ function makePostForm(boardId, blockedForum) {
   gBtn.className = "gif-btn";
   gBtn.textContent = "Gifs";
   gBtn.title = "Buscar y agregar GIFs como stickers";
+  var gifUrl = null;
+  var gifPrev = gifDraft(gifHost, function () { gifUrl = null; });
   gBtn.addEventListener("click", function () {
-    openGifPicker(form.elements.comment);
+    openGifPicker(form.elements.comment, function (src) {
+      gifUrl = src;
+      gifPrev.set(src);
+    });
   });
   tdAct.appendChild(gBtn);
   var btn = document.createElement("button");
@@ -271,7 +279,7 @@ function makePostForm(boardId, blockedForum) {
     }
     var comment = form.elements.comment.value.trim();
     var file = form.elements.file.files[0];
-    if (!comment && !file) return;
+    if (!comment && !file && !gifUrl) return;
     voteHashtags(comment);
 
     var subBtn = form.querySelector('button[type="submit"]');
@@ -297,12 +305,12 @@ function makePostForm(boardId, blockedForum) {
     };
 
     if (file) {
-      handleImageUpload(file, finish, function () {
+      handleImageUpload(file, function (u) { finish(u || gifUrl || null); }, function () {
         if (subBtn) subBtn.disabled = false;
-        finish(null);
+        finish(gifUrl || null);
       });
     } else {
-      finish(null);
+      finish(gifUrl || null);
     }
   });
 
@@ -495,6 +503,9 @@ function makeReplyForm(boardId, thread, blockedForum) {
   var ta = document.createElement("textarea");
   ta.placeholder = "Escribe tu respuesta...";
   rTxt.appendChild(ta);
+  var rGifHost = document.createElement("div");
+  rGifHost.className = "gif-draft-host";
+  rTxt.appendChild(rGifHost);
 
   var rAct = document.createElement("div");
   rAct.className = "row form-actions";
@@ -503,8 +514,13 @@ function makeReplyForm(boardId, thread, blockedForum) {
   gBtnR.className = "gif-btn";
   gBtnR.textContent = "Gifs";
   gBtnR.title = "Buscar y agregar GIFs como stickers";
+  var rGifUrl = null;
+  var rGifPrev = gifDraft(rGifHost, function () { rGifUrl = null; });
   gBtnR.addEventListener("click", function () {
-    openGifPicker(ta);
+    openGifPicker(ta, function (src) {
+      rGifUrl = src;
+      rGifPrev.set(src);
+    });
   });
   rAct.appendChild(gBtnR);
   var btn = document.createElement("button");
@@ -530,7 +546,7 @@ function makeReplyForm(boardId, thread, blockedForum) {
     }
     var comment = ta.value.trim();
     var file = inpImg.files[0];
-    if (!comment && !file) return;
+    if (!comment && !file && !rGifUrl) return;
     voteHashtags(comment);
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
@@ -552,12 +568,12 @@ function makeReplyForm(boardId, thread, blockedForum) {
       refresh();
     };
     if (file) {
-      handleImageUpload(file, finish, function () {
+      handleImageUpload(file, function (u) { finish(u || rGifUrl || null); }, function () {
         if (subBtn) subBtn.disabled = false;
-        finish(null);
+        finish(rGifUrl || null);
       });
     } else {
-      finish(null);
+      finish(rGifUrl || null);
     }
   });
 

@@ -23,6 +23,42 @@ const LIMIT = 20;
 
 export function isGifPickerOpen() { return !!backdrop; }
 
+/* area de preview de un gif elegido (se mostrara como imagen del post).
+   Devuelve { set(src), clear(), el }. clear() se llama con el boton X
+   y hombrea al callback onClear para que el form suelte la url. */
+export function gifDraft(host, onClear) {
+  var div = document.createElement("div");
+  div.className = "gif-draft";
+  div.style.display = "none";
+  var img = document.createElement("img");
+  img.alt = "GIF a publicar";
+  img.title = "Clic fuera del GIF para quitarlo";
+  var x = document.createElement("button");
+  x.type = "button";
+  x.className = "gif-draft-close";
+  x.textContent = "X";
+  x.title = "Quitar gif";
+  x.addEventListener("click", function () {
+    img.removeAttribute("src");
+    div.style.display = "none";
+    if (typeof onClear === "function") onClear();
+  });
+  div.appendChild(img);
+  div.appendChild(x);
+  host.appendChild(div);
+  return {
+    el: div,
+    set: function (src) {
+      img.src = src;
+      div.style.display = "inline-block";
+    },
+    clear: function () {
+      img.removeAttribute("src");
+      div.style.display = "none";
+    }
+  };
+}
+
 export function closeGifPicker() {
   if (backdrop) {
     backdrop.remove();
@@ -31,9 +67,17 @@ export function closeGifPicker() {
   }
 }
 
-/* inserta el gif en el textarea que se paso al abrir, oculto dentro de [...] */
+/* entrega el gif elegido: si el abridor paso un callback se lo devuelve a el
+   (el post lo usa como imagen adjunta); si no, lo inserta en el textarea
+   oculto dentro de [...] (comportamiento antiguo de "sticker de texto") */
 function pickGif(src) {
+  var onPick = state.onPick;
   var ta = state.ta;
+  if (typeof onPick === "function") {
+    try { onPick(src); } catch (e) { /* el callback no debe romper el cierre */ }
+    closeGifPicker();
+    return;
+  }
   var text = "[" + src + "] ";
   if (!ta) return;
   if (ta.selectionStart != null) {
@@ -209,7 +253,7 @@ function buildCats(win, grid) {
   return bar;
 }
 
-export function openGifPicker(ta) {
+export function openGifPicker(ta, onPick) {
   if (backdrop) closeGifPicker();
   backdrop = document.createElement("div");
   backdrop.className = "gifpicker-backdrop";
@@ -231,7 +275,7 @@ export function openGifPicker(ta) {
   head.appendChild(close);
 
   var grid = buildGrid();
-  state = { ta: ta, q: null, offset: 0, done: false, loading: false, stamp: 0 };
+  state = { ta: ta, onPick: onPick || null, q: null, offset: 0, done: false, loading: false, stamp: 0 };
   state.io = makeObserver(win);
 
   var volver = document.createElement("button");
