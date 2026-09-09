@@ -514,7 +514,7 @@ export function renderMyProfile() {
   var pt = document.createElement("h4");
   pt.textContent = "Mis publicaciones";
   postsSec.appendChild(pt);
-  var items = myPosts();
+  var items = myPosts().sort(function (a, b) { return b.post.ts - a.post.ts; });
   if (items.length === 0) {
     var empty = document.createElement("p");
     empty.className = "rp-text";
