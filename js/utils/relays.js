@@ -89,8 +89,9 @@ function pubWithRetry(draft) {
 }
 
 /* publica el snapshot completo de un usuario en un board (modelo blog).
-   snap = { board, posts:[{no, rt, content, image, ts}] } (todos los posts del
-   usuario en ese board, hilos y respuestas). d-tag FIJO por (autor, board).
+   snap = { board, posts:[{no, rt, content, image, ts}], likes:["5","5/12"] }.
+   (todos los posts del usuario en ese board, hilos y respuestas, y sus likes).
+   d-tag FIJO por (autor, board).
    Devuelve Promise<number> = relays que confirmaron. */
 export function publishBoardSnapshot(snap) {
   var now = Math.floor(Date.now() / 1000);
@@ -102,6 +103,7 @@ export function publishBoardSnapshot(snap) {
   ];
   var content = JSON.stringify({
     posts: snap.posts || [],
+    likes: snap.likes || [],
     updated_at: now
   });
   return pubWithRetry({ kind: POST_KIND, created_at: now, tags: tags, content: content });
@@ -127,6 +129,20 @@ export function fetchFollowerCount(pubHex) {
       });
       return Object.keys(authors).length;
     }).catch(function () { return 0; });
+}
+
+/* lista de pubkeys que siguen a pubHex (autores de contact lists kind 3
+   que incluyen a pubHex en sus tags p). Devuelve Promise<string[]>. */
+export function fetchFollowerPubkeys(pubHex) {
+  if (!pubHex) return Promise.resolve([]);
+  return queryEvents({ kinds: [3], "#p": [pubHex], limit: 200 }, { maxWait: 4000 })
+    .then(function (events) {
+      var authors = {};
+      events.forEach(function (ev) {
+        if (ev.pubkey && ev.pubkey !== pubHex) authors[ev.pubkey] = true;
+      });
+      return Object.keys(authors);
+    }).catch(function () { return []; });
 }
 
 /* publica el perfil (kind 0, NIP-01) del usuario a los relays.
@@ -246,6 +262,20 @@ function parseSnapshot(lib, ev) {
   return out;
 }
 
+/* extrae las keys de like relativas al board desde el contenido de un snapshot.
+   Devuelve array de strings como ["5", "5/12"]. */
+function snapshotLikes(lib, ev) {
+  try {
+    if (!lib.verifyEvent(ev)) return [];
+  } catch (e) { return []; }
+  var data = null;
+  try {
+    data = (typeof ev.content === "string") ? JSON.parse(ev.content) : null;
+  } catch (e) { return []; }
+  var likes = (data && Array.isArray(data.likes)) ? data.likes : [];
+  return likes.filter(function (k) { return typeof k === "string" && k; });
+}
+
 /* snapshots addressable de un board (los mas recientes de cada autor).
    Devuelve array de {pubkey, boardD, created_at, posts:[...]}. */
 function fetchBoardSnapshots(boardId, limit) {
@@ -301,17 +331,24 @@ export function fetchBoardPosts(boardId, limit) {
         newestByAuthor[ev.pubkey] = ev;
       });
       var out = [];
+      var likesData = {};
       Object.keys(newestByAuthor).forEach(function (pub) {
-        parseSnapshot(p.lib, newestByAuthor[pub]).forEach(function (post) {
+        var ev = newestByAuthor[pub];
+        parseSnapshot(p.lib, ev).forEach(function (post) {
           if (post.board === boardId) out.push(post);
+        });
+        snapshotLikes(p.lib, ev).forEach(function (relKey) {
+          var fullKey = boardId + "/" + relKey;
+          if (!likesData[fullKey]) likesData[fullKey] = [];
+          likesData[fullKey].push(pub);
         });
       });
       out.sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
-      console.log("[relays] fetchBoardPosts(" + boardId + ") -> " + out.length + " posts de " + events.length + " snapshots (" + Object.keys(newestByAuthor).length + " autores)");
-      return out;
+      console.log("[relays] fetchBoardPosts(" + boardId + ") -> " + out.length + " posts, " + Object.keys(likesData).length + " liked keys");
+      return { posts: out, likesData: likesData };
     });
   })
-  .catch(function () { console.warn("[relays] error fetchBoardPosts(" + boardId + ")", arguments); return []; });
+  .catch(function () { console.warn("[relays] error fetchBoardPosts(" + boardId + ")", arguments); return { posts: [], likesData: {} }; });
 }
 
 /* todos los posts de un usuario (pubHex) en todos los foros: lee todos sus
@@ -356,7 +393,12 @@ export function subscribeBoardPosts(boardId, onPosts) {
           if (seen[ev.id]) return;
           seen[ev.id] = true;
           var posts = parseSnapshot(p.lib, ev).filter(function (post) { return post.board === boardId; });
-          if (posts.length) onPosts(posts);
+          var likesData = {};
+          snapshotLikes(p.lib, ev).forEach(function (relKey) {
+            var fullKey = boardId + "/" + relKey;
+            likesData[fullKey] = [ev.pubkey];
+          });
+          if (posts.length || Object.keys(likesData).length) onPosts({ posts: posts, likesData: likesData });
         },
         maxWait: 9000
       }

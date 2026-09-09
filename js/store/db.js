@@ -51,6 +51,9 @@ if (!state.notifSeen) state.notifSeen = [];   /* claves de respuestas ya notific
 if (!state.savedForums) state.savedForums = []; /* foros guardados */
 if (!state.likes) state.likes = [];          /* ids de posts con like del usuario actual */
 if (!state.createdForums) state.createdForums = []; /* foros creados por usuarios del navegador */
+if (!state.followerNotifSeen) state.followerNotifSeen = []; /* pubkeys de seguidores ya notificados */
+if (!state.followerNotifSeenInit) state.followerNotifSeenInit = false;
+if (!state.likeNotifSeen) state.likeNotifSeen = []; /* claves de likes ya notificados */
 syncBoardsFromCreated();
 
 function load() {
@@ -344,6 +347,74 @@ export function toggleLike(boardId, threadNo, replyNo) {
 
 export function isLiked(boardId, threadNo, replyNo) {
   return state.likes.indexOf(likeKey(boardId, threadNo, replyNo)) >= 0;
+}
+
+/* notificacion estructurada generica: respuestas, likes, seguidores.
+   v: { type, fromPub, fromName, fromPic, boardId, threadNo, replyNo, text } */
+export function addUserActivityNotification(v) {
+  state.notifications.unshift({
+    type: v.type || "info",
+    fromPub: v.fromPub || null,
+    fromName: v.fromName || null,
+    fromPic: v.fromPic || null,
+    boardId: v.boardId || null,
+    threadNo: v.threadNo != null ? v.threadNo : null,
+    replyNo: v.replyNo != null ? v.replyNo : null,
+    text: v.text || "",
+    ts: Date.now(),
+    read: false
+  });
+  if (state.notifications.length > 60) state.notifications.length = 60;
+  save();
+}
+
+/* dedup de notificaciones de seguidores: evita repetir "X te siguio" */
+export function wasFollowerNotified(pubHex) {
+  return (state.followerNotifSeen || []).indexOf(pubHex) >= 0;
+}
+export function markFollowerNotified(pubHex) {
+  if (!state.followerNotifSeen) state.followerNotifSeen = [];
+  if (state.followerNotifSeen.indexOf(pubHex) < 0) state.followerNotifSeen.push(pubHex);
+  if (state.followerNotifSeen.length > 500) state.followerNotifSeen = state.followerNotifSeen.slice(-500);
+  save();
+}
+
+/* dedup de notificaciones de likes: evita repetir "X likeo tu post" */
+export function wasLikeNotified(key) {
+  return (state.likeNotifSeen || []).indexOf(key) >= 0;
+}
+export function markLikeNotified(key) {
+  if (!state.likeNotifSeen) state.likeNotifSeen = [];
+  if (state.likeNotifSeen.indexOf(key) < 0) state.likeNotifSeen.push(key);
+  if (state.likeNotifSeen.length > 500) state.likeNotifSeen = state.likeNotifSeen.slice(-500);
+  save();
+}
+
+/* extrae las keys de like de este board a partir de state.likes (local) */
+export function boardLocalLikes(boardId) {
+  var prefix = boardId + "/";
+  return state.likes.filter(function (k) { return k.indexOf(prefix) === 0; })
+    .map(function (k) { return k.slice(prefix.length); });
+}
+
+/* completa nombre/avatar de las notificaciones de un pubkey (like/follow) con
+   el perfil que llego tarde desde los relays. */
+export function enrichNotificationProfile(pubHex, profile) {
+  if (!pubHex || !profile) return;
+  var changed = false;
+  state.notifications.forEach(function (x) {
+    if (x.fromPub === pubHex) {
+      if (profile.name && (!x.fromName || x.fromName === pubHex.slice(0, 8))) {
+        x.fromName = profile.name;
+        changed = true;
+      }
+      if (profile.picture && !x.fromPic) {
+        x.fromPic = profile.picture;
+        changed = true;
+      }
+    }
+  });
+  if (changed) save();
 }
 
 /* todos los posts de un autor (pubHex) en todos los foros */

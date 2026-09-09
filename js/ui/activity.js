@@ -3,16 +3,20 @@ import { BOARDS } from "../config.js";
 import {
   isAnon, getMe, state, getBoard, save,
   followingList, unfollowUser, isFollowing,
-  notifications, markNotifsRead, clearNotifications, addNotification, unreadCount,
-  addReplyNotification, wasReplyNotified, markReplyNotified,
+  notifications, markNotifsRead, clearNotifications, unreadCount,
+  wasReplyNotified, markReplyNotified,
   savedForums, toggleSavedForum, isSaved,
-  postsByAuthor, isLiked, toggleLike
+  postsByAuthor, isLiked, toggleLike,
+  addUserActivityNotification, wasFollowerNotified, markFollowerNotified
 } from "../store/db.js";
 import { session } from "../store/session.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
-import { publishContactList } from "../utils/relays.js";
+import { publishContactList, fetchFollowerPubkeys, fetchProfiles } from "../utils/relays.js";
+import { publishUserBoard } from "../utils/relay-sync.js";
+import { enqueueBoard } from "../utils/outbox.js";
 import { openImage } from "./lightbox.js";
 import { openProfile, navTo } from "./appshell.js";
+import { openProfileByPubHex } from "./view.js";
 import { isBanned } from "../store/moderation.js";
 
 /* ---------- Inicio (seguidos) ---------- */
@@ -186,11 +190,8 @@ function follow(u) {
   if (!isFollowing(u.pubHex)) {
     state.following.push(u.pubHex);
     save();
-    addNotification("Empezaste a seguir a " + u.name + ".");
-    markNotifsRead();
     publishContactList(state.following);
   }
-  syncFollowedNotifications();
 }
 
 export function followByPubHex(pubHex, displayName) {
@@ -199,8 +200,6 @@ export function followByPubHex(pubHex, displayName) {
   if (!isFollowing(pubHex)) {
     state.following.push(pubHex);
     save();
-    addNotification("Empezaste a seguir a " + (displayName || pubHex.slice(0, 6)) + ".");
-    markNotifsRead();
     publishContactList(state.following);
     return true;
   }
@@ -226,9 +225,16 @@ function makeLikeBtn(boardId, post, threadNo, replyNo) {
   };
   el.textContent = label();
   el.addEventListener("click", function () {
+    var me = getMe();
     toggleLike(boardId, threadNo != null ? threadNo : post.no, replyNo);
     el.classList.toggle("liked", isLiked(boardId, threadNo != null ? threadNo : post.no, replyNo));
     el.textContent = label();
+    /* publicar snapshot actualizado (con likes) a relays; si falla, encola retry */
+    if (me && me.pubHex) {
+      publishUserBoard(boardId).then(function (ok) {
+        if (ok === 0) enqueueBoard(boardId);
+      });
+    }
   });
   return el;
 }
@@ -320,38 +326,43 @@ export function scanReplyNotifications() {
   return added;
 }
 
-/* detecta posts nuevos de usuarios seguidos y genera notificaciones.
-   Se llama desde el intervalo de 60s y despues de seguir. */
-export function syncFollowedNotifications() {
+/* detecta nuevos seguidores (kind 3 que incluyen nuestro pubkey) y genera
+   notificaciones estructuradas. Solo genera notificaciones de seguidores
+   NUEVOS (ya conocidos se marcan como vistos). */
+export function scanNewFollowers() {
   if (isAnon()) return;
-  if (!state.followNotifTs) state.followNotifTs = {};
-  var changed = false;
-  followingList().forEach(function (pubHex) {
-    if (isBanned(pubHex)) return;
-    var last = state.followNotifTs[pubHex] || 0;
-    var latest = last;
-    var b = null;
-    postsByAuthor(pubHex).forEach(function (item) {
-      if (item.post.ts > last) {
-        if (item.post.ts > latest) latest = item.post.ts;
-        if (!b) {
-          var bb = BOARDS.find(function (x) { return x.id === item.boardId; });
-          b = item.boardId + (bb ? " - " + bb.name : "");
-        }
-      }
-    });
-    if (latest > last) {
-      state.followNotifTs[pubHex] = latest;
-      var nm = meNameFor(pubHex);
-      addNotification(nm + " acaba de hacer un post en /" + b + ".");
-      changed = true;
+  var me = getMe();
+  if (!me || !me.pubHex) return;
+  fetchFollowerPubkeys(me.pubHex).then(function (pubkeys) {
+    if (!pubkeys.length) return;
+    if (!state.followerNotifSeen) state.followerNotifSeen = [];
+    /* primera ejecucion: marcar todos los actuales como vistos (sin notificar) */
+    if (!state.followerNotifSeenInit) {
+      pubkeys.forEach(function (pk) { markFollowerNotified(pk); });
+      state.followerNotifSeenInit = true;
+      save();
+      return;
     }
-  });
-  if (changed) {
-    markNotifsRead();
-    save();
-    refreshNotifBadge();
-  }
+    var newPubs = pubkeys.filter(function (pk) {
+      return !isBanned(pk) && !wasFollowerNotified(pk);
+    });
+    if (!newPubs.length) return;
+    /* buscar perfiles (nombre/avatar) de los nuevos seguidores */
+    fetchProfiles(newPubs).then(function (profileMap) {
+      newPubs.forEach(function (pk) {
+        var p = profileMap[pk] || {};
+        addUserActivityNotification({
+          type: "follow",
+          fromPub: pk,
+          fromName: p.name || pk.slice(0, 8),
+          fromPic: p.picture || null,
+          text: "empezo a seguirte"
+        });
+        markFollowerNotified(pk);
+      });
+      refreshNotifBadge();
+    });
+  }).catch(function () {});
 }
 
 export function refreshNotifBadge() {
@@ -360,6 +371,59 @@ export function refreshNotifBadge() {
   var n = isAnon() ? 0 : (unreadCount());
   badge.hidden = n === 0;
   badge.textContent = n;
+}
+
+/* helper compartido para renderizar un item de notificacion (popup y pagina).
+   Muestra avatar (si hay) + nombre clicnable + texto + fecha + tag de foro. */
+function renderNotifItem(li, x) {
+  if (x.fromPub) {
+    if (x.fromPic) {
+      var av = document.createElement("img");
+      av.className = "notif-avatar";
+      av.src = x.fromPic;
+      av.alt = "";
+      li.appendChild(av);
+    } else {
+      var ph = document.createElement("span");
+      ph.className = "notif-avatar-ph";
+      ph.textContent = (x.fromName || "?").charAt(0).toUpperCase();
+      li.appendChild(ph);
+    }
+  }
+  if (x.fromName) {
+    var nm = document.createElement("span");
+    nm.className = "notif-name";
+    nm.textContent = x.fromName;
+    if (x.fromPub) {
+      nm.style.cursor = "pointer";
+      nm.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        openProfileByPubHex(x.fromPub);
+      });
+    }
+    li.appendChild(nm);
+  }
+  var txt = document.createElement("span");
+  txt.className = "notif-text";
+  txt.textContent = " " + (x.text || "");
+  li.appendChild(txt);
+  if (x.boardId && (x.type === "reply" || x.type === "like")) {
+    var forum = document.createElement("span");
+    forum.className = "feed-forum";
+    forum.textContent = "/" + x.boardId + "/";
+    forum.title = "Ir al foro";
+    li.appendChild(forum);
+  }
+  if (x.type === "reply" || x.type === "like") {
+    li.addEventListener("click", function () {
+      openNotification(x.boardId, x.threadNo, x.replyNo);
+    });
+  } else if (x.type === "follow" && x.fromPub) {
+    li.style.cursor = "pointer";
+    li.addEventListener("click", function () {
+      openProfileByPubHex(x.fromPub);
+    });
+  }
 }
 
 export function toggleNotifications() {
@@ -383,7 +447,7 @@ export function toggleNotifications() {
     list.forEach(function (x) {
       var li = document.createElement("li");
       li.className = "notif-item";
-      li.textContent = x.text;
+      renderNotifItem(li, x);
       var d = document.createElement("span");
       d.className = "date";
       d.textContent = " " + fmtDate(x.ts);
@@ -437,7 +501,7 @@ export function renderNotifications() {
   var title = document.createElement("div");
   title.className = "board-header";
   var h = document.createElement("h2");
-  h.innerHTML = "Notificaciones <span>- respuestas a tus posts</span>";
+  h.innerHTML = "Notificaciones <span>- respuestas, likes y seguidores</span>";
   title.appendChild(h);
   wrap.appendChild(title);
 
@@ -456,7 +520,7 @@ export function renderNotifications() {
   if (list.length === 0) {
     var empty = document.createElement("div");
     empty.className = "notice";
-    empty.textContent = "Sin notificaciones por ahora. Cuando alguien responda a tus posts (o cites a alguien), apareceran aqui.";
+    empty.textContent = "Sin notificaciones por ahora. Cuando alguien responda o de like a tus posts (o te siga), apareceran aqui.";
     wrap.appendChild(empty);
     return wrap;
   }
@@ -465,27 +529,8 @@ export function renderNotifications() {
   ul.className = "notif-list";
   list.forEach(function (x) {
     var li = document.createElement("li");
-    li.className = "notif-item" + (x.type === "reply" ? " reply" : "");
-
-    if (x.type === "reply") {
-      var from = document.createElement("span");
-      from.className = "notif-from";
-      from.textContent = x.fromName || "Anonimo";
-      li.appendChild(from);
-      var txt = document.createElement("span");
-      txt.innerHTML = x.text || " respondio a tu post.";
-      li.appendChild(txt);
-      var forum = document.createElement("span");
-      forum.className = "feed-forum";
-      forum.textContent = "/" + x.boardId + "/";
-      forum.title = "Ir al foro";
-      li.appendChild(forum);
-      li.addEventListener("click", function () {
-        openNotification(x.boardId, x.threadNo, x.replyNo);
-      });
-    } else {
-      li.textContent = x.text;
-    }
+    li.className = "notif-item" + ((x.type === "reply" || x.type === "like") ? " reply" : "");
+    renderNotifItem(li, x);
 
     var d = document.createElement("span");
     d.className = "date";

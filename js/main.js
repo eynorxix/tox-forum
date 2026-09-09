@@ -21,7 +21,7 @@ import { fetchForums } from "./utils/relays.js";
 import { BOARDS } from "./config.js";
 import {
   closeNotifications, isNotifOpen, refreshNotifBadge,
-  closeSaved, isSavedOpen, syncFollowedNotifications, scanReplyNotifications
+  closeSaved, isSavedOpen, scanNewFollowers, scanReplyNotifications
 } from "./ui/activity.js";
 
 /* el controlador de presentacion inyecta sus acciones a los componentes */
@@ -107,7 +107,7 @@ document.addEventListener("click", function (ev) {
    cambio algo: así la lectura no se interrumpe cada minuto. */
 setInterval(function () {
   var removed = purgeExpired();
-  syncFollowedNotifications();
+  scanNewFollowers();
   var newReplies = scanReplyNotifications();
   refreshNotifBadge();
 

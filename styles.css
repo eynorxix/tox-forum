@@ -2288,6 +2288,36 @@ textarea::placeholder {
 .notif-item.reply .date { margin-top: 3px; }
 .notif-page .notif-clear { max-width: 220px; display: block; margin-top: 14px; }
 
+/* avatar + nombre clicnable en items de notificacion */
+.notif-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.notif-avatar-ph {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--orange);
+  font-weight: bold;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.notif-name {
+  font-weight: bold;
+  color: var(--green);
+  text-decoration: underline dotted;
+}
+.notif-name:hover { color: var(--orange); }
+.notif-text { color: var(--text); }
+
 /* ===== foros guardados ===== */
 .fo-cell.saved .fo-status { color: var(--teal); border-color: var(--teal); }
 

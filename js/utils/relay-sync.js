@@ -6,8 +6,11 @@
    - syncBoard(id)     : trae los hilos/respuestas de un foro y los inserta.
    - syncMyPosts()     : restaura los posts del usuario logueado (otro dispositivo).
    - Los anonimos NO publican a relays: su ambito sigue siendo solo local. */
-import { state, save, getBoard, getMe } from "../store/db.js";
-import { fetchBoardPosts, fetchUserPosts, fetchNames, subscribeBoardPosts, publishBoardSnapshot } from "./relays.js";
+import { state, save, getBoard, getMe, isLiked,
+  wasLikeNotified, markLikeNotified, addUserActivityNotification,
+  boardLocalLikes, enrichNotificationProfile
+} from "../store/db.js";
+import { fetchBoardPosts, fetchUserPosts, fetchProfiles, fetchNames, subscribeBoardPosts, publishBoardSnapshot } from "./relays.js";
 import { isBanned } from "../store/moderation.js";
 import { voteHashtags } from "../domain/voting.js";
 import { BOARDS } from "../config.js";
@@ -49,8 +52,10 @@ function buildPost(post, isThread) {
 /* fusiona posts (hilos primero, luego respuestas) dentro de un foro.
    Devuelve true si algo cambio. La fuente local gana en caso de conflicto.
    Usa clave compuesta pubkey:no para evitar colisiones entre usuarios distintos
-   con el mismo 'no' local. */
-function mergeBoard(boardId, posts) {
+   con el mismo 'no' local.
+   likesData: { "board/no": [pubkey], "board/no/reply": [pubkey] } — contadores
+   de likes agregados desde los snapshots de los relays. */
+function mergeBoard(boardId, posts, likesData) {
   /* los posts de autores baneados no se fusionan (moderacion del admin) */
   posts = (posts || []).filter(function (p) { return !isBanned(p.pubkey); });
   var coll = getBoard(boardId);
@@ -99,7 +104,70 @@ function mergeBoard(boardId, posts) {
     save();
     if (unknown.length) resolveNames(unknown, coll);
   }
-  console.log("[sync] mergeBoard(" + boardId + ") inserto cambios? " + changed + " (recibio " + posts.length + " posts)");
+
+  /* ---- likes: actualizar contadores y detectar likes en mis posts ---- */
+  var me = getMe();
+  if (likesData && typeof likesData === "object") {
+    Object.keys(likesData).forEach(function (fullKey) {
+      var likers = likesData[fullKey];
+      if (!likers || !likers.length) return;
+      /* fullKey = "board/threadNo" o "board/threadNo/replyNo" */
+      var kParts = fullKey.split("/");
+      if (kParts.length < 2) return;
+      var thNo = parseInt(kParts[1], 10);
+      var rNo = kParts.length >= 3 ? parseInt(kParts[2], 10) : null;
+
+      var target = null;
+      coll.forEach(function (th) {
+        if (th.no === thNo) {
+          target = rNo != null
+            ? (th.replies.find(function (r) { return r.no === rNo; }) || null)
+            : th;
+        }
+      });
+      if (!target) return;
+
+      /* contar likes: autores distintos de mí, +1 si el like es mio localmente */
+      var unique = {};
+      likers.forEach(function (pk) {
+        if (!me || pk !== me.pubHex) unique[pk] = true;
+      });
+      var count = Object.keys(unique).length;
+      if (me && isLiked(boardId, thNo, rNo)) count++;
+      if (target.likes !== count) {
+        target.likes = count;
+        changed = true;
+      }
+
+      /* notificar si alguien likeo MIS posts */
+      if (me && me.pubHex && target.ownerType === "user" && target.ownerPub === me.pubHex) {
+        likers.forEach(function (likerPub) {
+          if (!me || likerPub === me.pubHex) return;
+          var nKey = likerPub + ":" + fullKey;
+          if (!wasLikeNotified(nKey)) {
+            markLikeNotified(nKey);
+            var u = state.users && state.users[likerPub];
+            addUserActivityNotification({
+              type: "like",
+              fromPub: likerPub,
+              fromName: u ? u.name : namesCache[likerPub] || likerPub.slice(0, 8),
+              fromPic: u ? u.icon : null,
+              boardId: boardId,
+              threadNo: thNo,
+              replyNo: rNo,
+              text: "le dio like a tu post en /" + boardId + "/ (hilo No." + thNo + ")"
+            });
+            /* enriquecer avatar/nombre desde relays si no esta en estado local */
+            fetchProfiles([likerPub]).then(function (m) {
+              enrichNotificationProfile(likerPub, m[likerPub] || {});
+            });
+          }
+        });
+      }
+    });
+  }
+
+  console.log("[sync] mergeBoard(" + boardId + ") inserto cambios? " + changed + " (recibio " + posts.length + " posts, " + Object.keys(likesData || {}).length + " liked keys)");
   return changed;
 }
 
@@ -122,7 +190,7 @@ export function publishUserBoard(boardId) {
       });
     }
   });
-  return publishBoardSnapshot({ board: boardId, posts: posts });
+  return publishBoardSnapshot({ board: boardId, posts: posts, likes: boardLocalLikes(boardId) });
 }
 
 function resolveNames(pubkeys, coll) {
@@ -163,8 +231,8 @@ export function syncBoard(boardId, onDone) {
     return;
   }
   syncing[boardId] = true;
-  fetchBoardPosts(boardId).then(function (posts) {
-    var changed = mergeBoard(boardId, posts);
+  fetchBoardPosts(boardId).then(function (result) {
+    var changed = mergeBoard(boardId, result.posts, result.likesData);
     syncing[boardId] = false;
     if (onDone) onDone(changed);
   }).catch(function () {
@@ -227,9 +295,9 @@ export function watchBoard(boardId, onIncoming) {
   liveCbs[boardId] = onIncoming || null;
   if (liveSubs[boardId] || livePending[boardId]) return;
   livePending[boardId] = true;
-  subscribeBoardPosts(boardId, function (posts) {
-    var changed = mergeBoard(boardId, posts);
-    if (!changed && posts.some(function (post) {
+  subscribeBoardPosts(boardId, function (data) {
+    var changed = mergeBoard(boardId, data.posts, data.likesData);
+    if (!changed && data.posts.some(function (post) {
       return post.threadNo != null &&
         !getBoard(boardId).some(function (th) { return th.no === post.threadNo; });
     })) {
