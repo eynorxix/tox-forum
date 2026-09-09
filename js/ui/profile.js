@@ -176,11 +176,14 @@ function openShareProfile(pubHex) {
   document.body.appendChild(box);
 }
 
-/* boton "Compartir" del perfil: solo si el perfil tiene pubHex */
-function shareButton(pubHex) {
+/* boton "Compartir" del perfil: solo si el perfil tiene pubHex.
+   cls = "profile-tab" para vivir en la barra de pestanas del perfil propio
+   (estilo naranja, como /Publico/ /Mis-publicaciones/ /Configuracion/);
+   por defecto usa "btn2 share-btn" (ancho completo en el perfil ajeno). */
+function shareButton(pubHex, cls) {
   var b = document.createElement("button");
   b.type = "button";
-  b.className = "btn2 share-btn";
+  b.className = cls || "btn2 share-btn";
   b.textContent = "Compartir";
   b.title = "Compartir el enlace publico de este perfil";
   b.addEventListener("click", function () { openShareProfile(pubHex); });
@@ -349,7 +352,6 @@ export function renderMyProfile() {
   back.textContent = "← Volver al foro";
   back.addEventListener("click", function () { navTo(session.lastBoard); });
   backRow.appendChild(back);
-  if (me.pubHex) backRow.appendChild(shareButton(me.pubHex));
 
   var head = document.createElement("div");
   head.className = "profile-head";
@@ -402,6 +404,9 @@ export function renderMyProfile() {
   tabs.appendChild(tabPub);
   tabs.appendChild(tabMine);
   tabs.appendChild(tabCfg);
+  if (me.pubHex) {
+    tabs.appendChild(shareButton(me.pubHex, "profile-tab"));
+  }
 
   var pPub = document.createElement("div");
   pPub.className = "profile-tabpanel active";

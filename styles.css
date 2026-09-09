@@ -1288,6 +1288,7 @@ textarea::placeholder {
 /* pestañas /Publico/ | /Mis-publicaciones/ del perfil propio */
 .profile-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 14px;
