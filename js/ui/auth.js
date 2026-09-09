@@ -2,6 +2,7 @@
 import { registerUser, login, logout } from "../store/db.js";
 import { generateKeys } from "../utils/nostr.js";
 import { publishProfile, publishRegistration } from "../utils/relays.js";
+import { enqueueRegistration } from "../utils/outbox.js";
 import { openMine, refresh, navTo } from "./appshell.js";
 import { refreshChip } from "./nav.js";
 import { syncMyPosts } from "../utils/relay-sync.js";
@@ -408,10 +409,13 @@ export function publishRegistrationFromCurrent() {
   import("../store/db.js").then(function (db) {
     var me = db.getMe();
     if (!me) return;
-    publishRegistration({
+    var input = {
       name: me.name, npub: me.npub, pubHex: me.pubHex,
       icon: me.icon, mainForum: me.mainForum, forums: me.forums,
       desc: me.desc
+    };
+    publishRegistration(input).then(function (ok) {
+      if (ok === 0) enqueueRegistration(input);
     });
   }).catch(function () {});
 }

@@ -5,7 +5,6 @@ import { voteHashtags } from "../domain/voting.js";
 import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { fileToDataURL, toast, createDropzone } from "../utils/dom.js";
-import { RELAYS } from "../utils/relays.js";
 import { publishUserBoard } from "../utils/relay-sync.js";
 import { makeUniverseViewer } from "../domain/universe.js";
 import { openImage } from "./lightbox.js";
@@ -14,6 +13,7 @@ import { likeButton } from "./activity.js";
 import { isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
 import { openGifPicker, gifDraft } from "./gifpicker.js";
+import { enqueueBoard } from "../utils/outbox.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -23,14 +23,14 @@ function handleImageUpload(file, onDone, onErr) {
   });
 }
 
-/* informa al usuario cuantos relays confirmaron el post (0 = solo local) */
-function reportPublish(ok) {
-  if (ok >= RELAYS.length / 2) {
-    toast("Publicado en " + ok + "/" + RELAYS.length + " relays");
-  } else if (ok > 0) {
-    toast("Solo " + ok + "/" + RELAYS.length + " relays recibieron el post", "warn");
+/* informa al usuario que el post quedo publicado: sin mostrar el numero de
+   relays ni de reintentos. Si ningun relay confirmo, se encola en el outbox
+   para reenviarlo solo en background (nada de contar intentos). */
+function reportPublish(ok, boardId) {
+  if (ok > 0) {
+    toast("Publicado");
   } else {
-    toast("Sin conexion a relays: el post quedo solo en este navegador y se reintentara solo", "err");
+    enqueueBoard(boardId);
   }
 }
 
@@ -214,7 +214,7 @@ function makePostForm(boardId, blockedForum) {
       };
       getBoard(boardId).push(thread);
       save();
-      publishUserBoard(boardId).then(reportPublish);
+      publishUserBoard(boardId).then(function (ok) { reportPublish(ok, boardId); });
       refresh();
     };
 
@@ -478,7 +478,7 @@ function makeReplyForm(boardId, thread, blockedForum) {
       };
       thread.replies.push(reply);
       save();
-      publishUserBoard(boardId).then(reportPublish);
+      publishUserBoard(boardId).then(function (ok) { reportPublish(ok, boardId); });
       refresh();
     };
     if (file) {

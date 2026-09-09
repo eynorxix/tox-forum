@@ -7,6 +7,7 @@ import { session } from "../store/session.js";
 import { fileToDataURL, toast, createDropzone } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishProfile } from "../utils/relays.js";
+import { enqueueProfile } from "../utils/outbox.js";
 import { refreshChip } from "./nav.js";
 import { refresh, navTo } from "./appshell.js";
 
@@ -116,7 +117,8 @@ export function openSettings(startTab) {
       /* el nombre/perfil se publica a relays (kind 0) para que todos los
          usuarios vean el mismo nombre al conectarse por npub */
       publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
-        toast(ok > 0 ? "Perfil actualizado y publicado (" + ok + " relays)" : "Perfil guardado solo en este navegador", ok > 0 ? "" : "warn");
+        if (ok > 0) toast("Perfil actualizado y publicado");
+        else enqueueProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() });
       });
     };
     if (inAv.files[0]) {
@@ -293,7 +295,8 @@ export function openSettings(startTab) {
     refreshChip();
     refresh();
     publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
-      toast(ok > 0 ? "Redes actualizadas y publicadas (" + ok + " relays)" : "Redes guardadas solo en este navegador", ok > 0 ? "" : "warn");
+      if (ok > 0) toast("Redes actualizadas y publicadas");
+      else enqueueProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() });
     });
   }
 

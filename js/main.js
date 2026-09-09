@@ -6,6 +6,7 @@ import { go, render, showProfile, showMyProfile, openProfileByPubHex } from "./u
 import { renderNav, refreshChip } from "./ui/nav.js";
 import { warmNostr } from "./utils/nostr-lib.js";
 import { syncBoard, isWatchingBoard, syncAllBoards } from "./utils/relay-sync.js";
+import { startOutbox } from "./utils/outbox.js";
 import { closeImage } from "./ui/lightbox.js";
 import { closeForos, isForosOpen } from "./ui/foros.js";
 import { closeAuth, isAuthOpen } from "./ui/auth.js";
@@ -248,3 +249,7 @@ syncAllBoards(function (changed) {
     render();
   }
 });
+
+/* outbox: reenvia en background los posts/perfil/registro que quedaron sin
+   confirmar en relays por falta de conexion (sin mostrar numero de intentos). */
+startOutbox();

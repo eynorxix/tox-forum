@@ -11,7 +11,7 @@ import { bindTagAC } from "../utils/autocomplete.js";
 import { linksInText, fmtDate, attachAutoEmbeds } from "../utils/text.js";
 import { fileToDataURL } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
-import { RELAYS, fetchFollowerCount } from "../utils/relays.js";
+import { fetchFollowerCount } from "../utils/relays.js";
 import { publishUserBoard } from "../utils/relay-sync.js";
 import { toast } from "../utils/dom.js";
 import { openImage } from "./lightbox.js";
@@ -19,6 +19,7 @@ import { refresh, navTo } from "./appshell.js";
 import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
 import { openGifPicker, gifDraft } from "./gifpicker.js";
+import { enqueueBoard } from "../utils/outbox.js";
 import { isBanned, isStaff } from "../store/moderation.js";
 
 function socialsEl(user) {
@@ -488,8 +489,8 @@ export function renderMyProfile() {
       getBoard(dest).push(thr);
       save();
       publishUserBoard(dest).then(function (ok) {
-        if (ok >= RELAYS.length / 2) toast("Publicado en /" + dest + "/ (" + ok + "/" + RELAYS.length + " relays)");
-        else toast("Sin conexion a relays: el post quedo solo local", "err");
+        if (ok > 0) toast("Publicado en /" + dest + "/");
+        else enqueueBoard(dest);
       });
       refresh();
     };
