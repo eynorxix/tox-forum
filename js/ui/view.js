@@ -68,22 +68,6 @@ export function render() {
   if (session.currentView === "seguidos") pvBoard = session.lastBoard;
   if (session.currentView === "notificaciones") pvBoard = session.lastBoard;
 
-  /* en movil los paneles laterales viven en drawers accesibles desde los
-     botones "Colab" (izquierdo) y "Foros" (derecho) de la barra superior */
-  var mcolab = document.getElementById("mobile-colab");
-  if (mcolab && mcolab.style.display !== "none") {
-    mcolab.innerHTML = "";
-    var sdDrawer = renderSidebar(pvBoard);
-    sdDrawer.className = sdDrawer.className.replace(/\bsidebar\b/, "sidebar mobile-sd");
-    mcolab.appendChild(sdDrawer);
-  }
-  var mrap = document.getElementById("mobile-rap");
-  if (mrap && mrap.style.display !== "none") {
-    mrap.innerHTML = "";
-    var rpDrawer = renderRightPanel();
-    rpDrawer.className = rpDrawer.className.replace(/\brightpanel\b/, "rightpanel mobile-rp");
-    mrap.appendChild(rpDrawer);
-  }
   if (session.currentView === "home" && !session.profileView && !session.myProfileView) {
     main.classList.remove("wide");
     main.appendChild(renderHome());
