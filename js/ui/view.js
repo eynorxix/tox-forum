@@ -18,6 +18,29 @@ setNamesRefresh(function () {
       !session.profileView && !session.myProfileView) render();
 });
 
+/* la URL (hash) refleja siempre la vista actual para que cada seccion tenga
+   su propio enlace: #inicio, #foro/<id>, #seguidos, #notificaciones,
+   #mio, #perfil/<pubHex>. No dispara hashchange (replaceState). */
+function syncUrl() {
+  var h = "#inicio";
+  if (session.myProfileView) {
+    h = "#mio";
+  } else if (session.profileView && session.profileView.user && session.profileView.user.pubHex) {
+    h = "#perfil/" + session.profileView.user.pubHex;
+  } else if (session.currentView === "seguidos") {
+    h = "#seguidos";
+  } else if (session.currentView === "notificaciones") {
+    h = "#notificaciones";
+  } else if (session.currentView === "home") {
+    h = "#inicio";
+  } else {
+    h = "#foro/" + session.currentView;
+  }
+  if (location.hash !== h) {
+    try { history.replaceState(null, "", h); } catch (e) {}
+  }
+}
+
 export function go(view) {
   var hadFocus = !!(session.focus && session.focus.boardId === view);
   session.myProfileView = false;
@@ -26,6 +49,7 @@ export function go(view) {
   refreshChip();
   renderNav();
   render();
+  syncUrl();
   if (!hadFocus) window.scrollTo(0, 0);
 }
 
@@ -124,6 +148,7 @@ export function showProfile(boardId, user) {
   session.currentView = boardId;
   renderNav();
   render();
+  syncUrl();
   window.scrollTo(0, 0);
   /* si el usuario visto tiene pubHex, buscamos su perfil PUBLICO (redes+desc)
      en relays para completar el modulo /publico/ del perfil */
@@ -173,5 +198,6 @@ export function showMyProfile() {
   refreshChip();
   renderNav();
   render();
+  syncUrl();
   window.scrollTo(0, 0);
 }

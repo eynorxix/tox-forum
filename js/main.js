@@ -180,15 +180,40 @@ refreshChip();
 refreshNotifBadge();
 render();
 
-/* URL publico de perfil: #perfil/<pubHex> (por ejemplo al compartir tu perfil).
-   Si la pagina se abre con ese hash (o cambia de hash), se muestra el perfil
-   publico de ese usuario en vez de la vista por defecto. */
-function routeProfileHash() {
-  var hex = parseProfileHash(location.hash);
-  if (hex) openProfileByPubHex(hex);
+/* URL de la vista actual. Cada seccion tiene su propio enlace:
+   - #inicio (home), #foro/<id>, #seguidos, #notificaciones, #mio
+   - #perfil/<pubHex> (perfil publico, p.ej. al compartir tu perfil)
+   Si la pagina se abre con un hash (o cambia de hash), se navega a esa vista. */
+function routeHash() {
+  var hash = location.hash || "#inicio";
+  if (hash.indexOf("#perfil/") === 0) {
+    var hex = parseProfileHash(hash);
+    if (hex) { openProfileByPubHex(hex); return; }
+  }
+  if (hash === "#mio") {
+    showMyProfile();
+    return;
+  }
+  if (hash === "#seguidos") {
+    go("seguidos");
+    return;
+  }
+  if (hash === "#notificaciones") {
+    go("notificaciones");
+    return;
+  }
+  if (hash.indexOf("#foro/") === 0) {
+    var id = hash.slice(6);
+    if (BOARDS.some(function (b) { return b.id === id; })) {
+      go(id);
+      return;
+    }
+  }
+  if (hash !== "#inicio") location.hash = "#inicio";
+  go("home");
 }
-window.addEventListener("hashchange", routeProfileHash);
-routeProfileHash();
+window.addEventListener("hashchange", routeHash);
+routeHash();
 
 /* sincroniza todos los foros con los posts de Nostr al arrancar, para que un
    visitante nuevo vea el historial de todos los foros (no solo el abierto).
