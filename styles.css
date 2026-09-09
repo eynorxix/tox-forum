@@ -1589,6 +1589,8 @@ textarea::placeholder {
   letter-spacing: 1px;
 }
 .top-btn:hover { background: var(--orange); color: #16161e; }
+.top-btn.active { background: var(--orange); color: #16161e; border-color: var(--orange); }
+.top-btn .notif-badge-nav { margin-left: 5px; }
 
 /* ===== layouts emergentes (Foros / Colab) en la barra superior ===== */
 .topmod-backdrop {

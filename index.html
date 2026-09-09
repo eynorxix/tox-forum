@@ -18,11 +18,15 @@
   <header id="topbar">
     <div class="inner">
       <div id="top-actions">
-        <button id="top-colab-btn" type="button" class="top-btn" title="Colaboradores y seguidos">Colab</button>
-        <button id="top-foros-btn" type="button" class="top-btn" title="Foros principales y de colaboradores">Foros</button>
         <button id="my-profile-btn" type="button" class="my-profile-chip" title="Mi perfil">
           <span id="mp-avatar"></span>
           <span id="mp-label">Mi perfil</span>
+        </button>
+        <button id="top-colab-btn" type="button" class="top-btn" title="Colaboradores y seguidos">Colab</button>
+        <button id="top-foros-btn" type="button" class="top-btn" title="Foros principales y de colaboradores">Foros</button>
+        <button id="nav-home" type="button" class="top-btn" data-board="home" title="Inicio">Inicio</button>
+        <button id="notif-btn" type="button" class="top-btn" data-board="notificaciones" title="Notificaciones">
+          Notif <span class="notif-badge-nav" id="notif-badge" hidden>0</span>
         </button>
       </div>
       <nav id="board-nav"></nav>
