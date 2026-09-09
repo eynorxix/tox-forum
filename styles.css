@@ -108,11 +108,14 @@ a:visited { color: var(--link-visited); }
 }
 #topbar .inner {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   gap: 0 14px;
   max-width: 1000px;
   margin: 0 auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
 }
 .logo a {
   font-family: "Courier New", monospace;
@@ -123,7 +126,11 @@ a:visited { color: var(--link-visited); }
 }
 .logo a:hover { text-decoration: none; }
 
-#board-nav { font-size: 16px; }
+#board-nav {
+  font-size: 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 #board-nav a {
   margin-right: 8px;
 }
@@ -182,6 +189,8 @@ a:visited { color: var(--link-visited); }
   align-items: center;
   gap: 8px;
   align-self: center;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .top-chip {
   position: relative;
