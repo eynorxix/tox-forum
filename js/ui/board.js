@@ -15,6 +15,7 @@ import { isBanned } from "../store/moderation.js";
 import { session } from "../store/session.js";
 import { openGifPicker, gifDraft } from "./gifpicker.js";
 import { enqueueBoard } from "../utils/outbox.js";
+import { asciiLoader } from "../utils/ascii-loader.js";
 
 /* sube una imagen: prefiere Blossom (persiste en la red); si falla, usa
    dataURL local como respaldo para que el post funcione igual. */
@@ -28,6 +29,7 @@ function handleImageUpload(file, onDone, onErr) {
    relays ni de reintentos. Si ningun relay confirmo, se encola en el outbox
    para reenviarlo solo en background (nada de contar intentos). */
 function reportPublish(ok, boardId) {
+  if (isAnon()) return; /* los anonimos no publican a relays */
   if (ok > 0) {
     toast("Publicado");
   } else {
@@ -174,6 +176,7 @@ function makePostForm(boardId, blockedForum) {
   btn.type = "submit";
   btn.textContent = "Publicar hilo";
   tdAct.appendChild(btn);
+  var loader = asciiLoader();
   trAct.appendChild(tdAct);
   tbl.appendChild(trAct);
 
@@ -200,6 +203,8 @@ function makePostForm(boardId, blockedForum) {
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
 
+    loader.start(btn);
+
     var me = getMe();
     var finish = function (image) {
       var thread = {
@@ -215,7 +220,10 @@ function makePostForm(boardId, blockedForum) {
       };
       getBoard(boardId).push(thread);
       save();
-      publishUserBoard(boardId).then(function (ok) { reportPublish(ok, boardId); });
+      publishUserBoard(boardId).then(function (ok) {
+        reportPublish(ok, boardId);
+        loader.stop();
+      });
       refresh();
     };
 
@@ -451,6 +459,7 @@ function makeReplyForm(boardId, thread, blockedForum) {
   btn.type = "submit";
   btn.textContent = "Enviar respuesta";
   rAct.appendChild(btn);
+  var loader = asciiLoader();
 
   form.appendChild(rTxt);
   form.appendChild(rAct);
@@ -475,6 +484,7 @@ function makeReplyForm(boardId, thread, blockedForum) {
     var subBtn = form.querySelector('button[type="submit"]');
     if (subBtn) { subBtn.disabled = true; }
     var me = getMe();
+    loader.start(btn);
     var finish = function (image) {
       var reply = {
         no: nextNo(),
@@ -488,7 +498,10 @@ function makeReplyForm(boardId, thread, blockedForum) {
       };
       thread.replies.push(reply);
       save();
-      publishUserBoard(boardId).then(function (ok) { reportPublish(ok, boardId); });
+      publishUserBoard(boardId).then(function (ok) {
+        reportPublish(ok, boardId);
+        loader.stop();
+      });
       refresh();
     };
     if (file) {

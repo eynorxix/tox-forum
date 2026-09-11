@@ -8,6 +8,7 @@ import { fileToDataURL, toast, createDropzone } from "../utils/dom.js";
 import { uploadImage } from "../utils/blossom.js";
 import { publishProfile } from "../utils/relays.js";
 import { enqueueProfile } from "../utils/outbox.js";
+import { asciiLoader } from "../utils/ascii-loader.js";
 import { refreshChip } from "./nav.js";
 import { refresh, navTo } from "./appshell.js";
 
@@ -107,18 +108,21 @@ export function openSettings(startTab) {
   sBtn.type = "button";
   sBtn.className = "btn2";
   sBtn.textContent = "Guardar cambios";
+  var sLoader = asciiLoader();
   sBtn.addEventListener("click", function () {
     var doSave = function () {
       me.name = inNm.value.trim() || "Anonimo";
       me.desc = inDesc.value.trim();
       save();
       refreshChip();
+      sLoader.start(sBtn);
       refresh();
       /* el nombre/perfil se publica a relays (kind 0) para que todos los
          usuarios vean el mismo nombre al conectarse por npub */
       publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
         if (ok > 0) toast("Perfil actualizado y publicado");
         else enqueueProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() });
+        sLoader.stop();
       });
     };
     if (inAv.files[0]) {
@@ -283,20 +287,23 @@ export function openSettings(startTab) {
   redSaveBtn.type = "button";
   redSaveBtn.className = "btn2";
   redSaveBtn.textContent = "Guardar redes";
+  var redLoader = asciiLoader();
   redSaveBtn.addEventListener("click", function () {
-    saveRedesArch();
+    saveRedesArch(redSaveBtn);
   });
   redesAct.appendChild(redSaveBtn);
   pRedes.appendChild(redesAct);
 
-  function saveRedesArch() {
+  function saveRedesArch(nearBtn) {
     setSocials(currentRedes());
     save();
     refreshChip();
     refresh();
+    redLoader.start(nearBtn || redSaveBtn);
     publishProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() }).then(function (ok) {
       if (ok > 0) toast("Redes actualizadas y publicadas");
       else enqueueProfile({ name: me.name, picture: me.icon || null, desc: me.desc, socials: mySocials() });
+      redLoader.stop();
     });
   }
 
@@ -357,7 +364,7 @@ export function openSettings(startTab) {
         var arr = currentRedes();
         arr[idx] = { label: t, url: u };
         setSocials(arr);
-        saveRedesArch();
+        saveRedesArch(saveRed);
       });
       editRow.appendChild(editTitle);
       editRow.appendChild(editUrl);
@@ -371,7 +378,7 @@ export function openSettings(startTab) {
       delRed.textContent = "Quitar";
       delRed.addEventListener("click", function () {
         setSocials(currentRedes().filter(function (_, i) { return i !== idx; }));
-        saveRedesArch();
+        saveRedesArch(delRed);
       });
       item.appendChild(delRed);
 
@@ -405,6 +412,7 @@ export function openSettings(startTab) {
   createBtn.type = "button";
   createBtn.className = "btn2 create-forum-btn";
   createBtn.textContent = "Crear foro";
+  var createLoader = asciiLoader();
   createBtn.addEventListener("click", function () {
     if (!getMe()) {
       toast("Debes tener una cuenta para crear foros.", "warn");
@@ -421,12 +429,18 @@ export function openSettings(startTab) {
     }
     var name = nameIn.value.trim();
     if (!name) { toast("Escribe un nombre para el foro", "warn"); return; }
+    createLoader.start(createBtn);
     var f = createForum(name);
-    if (!f) { toast("No se pudo crear: solo los colaboradores aprobados pueden crear foros.", "err"); return; }
+    if (!f) {
+      createLoader.stop();
+      toast("No se pudo crear: solo los colaboradores aprobados pueden crear foros.", "err");
+      return;
+    }
     nameIn.value = "";
     toast("Foro /" + f.id + "/ creado, publicado y disponible para todos");
     refreshForumList();
     refresh();
+    createLoader.stop();
   });
   createRow.appendChild(nameIn);
   createRow.appendChild(createBtn);
@@ -476,11 +490,14 @@ export function openSettings(startTab) {
         saveName.type = "button";
         saveName.className = "btn2";
         saveName.textContent = "Guardar nombre";
+        var nameLoader = asciiLoader();
         saveName.addEventListener("click", function () {
           if (renameForum(f.id, editIn.value.trim())) {
           toast("Nombre actualizado");
+          nameLoader.start(saveName);
           refreshForumList();
           refresh();
+          nameLoader.stop();
         }
       });
       editRow.appendChild(editIn);

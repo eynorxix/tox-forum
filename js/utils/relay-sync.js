@@ -174,6 +174,10 @@ function mergeBoard(boardId, posts, likesData) {
 /* re-publica en relays el snapshot de TODOS los posts del usuario actual en un
    board (modelo blog). Se llama despues de publicar un hilo o una respuesta,
    para que el evento addressable del usuario en ese board quede actualizado.
+   Incluye:
+     - los hilos que el usuario creo (rt = null),
+     - TODAS sus respuestas, tanto en hilos propios como en hilos de OTROS
+       usuarios (rt = numero del hilo, aunque ese hilo no sea de su autoridad).
    Devuelve Promise<number> = relays que confirmaron. */
 export function publishUserBoard(boardId) {
   var me = getMe();
@@ -181,14 +185,15 @@ export function publishUserBoard(boardId) {
   var posts = [];
   var coll = getBoard(boardId) || [];
   coll.forEach(function (th) {
-    if (th.ownerType === "user" && th.ownerPub === me.pubHex) {
+    var thIsMine = th.ownerType === "user" && th.ownerPub === me.pubHex;
+    if (thIsMine) {
       posts.push({ no: th.no, rt: null, content: th.comment || "", image: th.image || null, ts: th.ts || Date.now() });
-      (th.replies || []).forEach(function (r) {
-        if (r.ownerType === "user" && r.ownerPub === me.pubHex) {
-          posts.push({ no: r.no, rt: th.no, content: r.comment || "", image: r.image || null, ts: r.ts || Date.now() });
-        }
-      });
     }
+    (th.replies || []).forEach(function (r) {
+      if (r.ownerType === "user" && r.ownerPub === me.pubHex) {
+        posts.push({ no: r.no, rt: th.no, content: r.comment || "", image: r.image || null, ts: r.ts || Date.now() });
+      }
+    });
   });
   return publishBoardSnapshot({ board: boardId, posts: posts, likes: boardLocalLikes(boardId) });
 }

@@ -86,6 +86,8 @@ function stopLiveWatch() {
 export function render() {
   cancelAnims();
   var main = document.getElementById("content");
+  var prevScroll = window.scrollY;
+  var hadFocus = !!(session.focus && session.focus.boardId);
   main.innerHTML = "";
   var pvBoard = session.profileView ? session.profileView.boardId : session.currentView;
   if (session.myProfileView) pvBoard = session.lastBoard;
@@ -141,6 +143,9 @@ export function render() {
       if (tbs) setChart(getChartType(), tbs);
     }
   }
+  /* mantener la posicion de scroll al re-renderizar (publicar/likear/sync);
+     si hay focus (navegacion a un post), applyFocus ya lo controla. */
+  if (!hadFocus && prevScroll > 0) window.scrollTo(0, prevScroll);
 }
 
 export function showProfile(boardId, user) {

@@ -20,6 +20,7 @@ import { followByPubHex } from "./activity.js";
 import { openSettings } from "./settings.js";
 import { openGifPicker, gifDraft } from "./gifpicker.js";
 import { enqueueBoard } from "../utils/outbox.js";
+import { asciiLoader } from "../utils/ascii-loader.js";
 import { isBanned, isStaff } from "../store/moderation.js";
 
 function socialsEl(user) {
@@ -462,6 +463,7 @@ export function renderMyProfile() {
   qBtn.type = "button";
   qBtn.textContent = "Publicar desde mi perfil";
   qAct.appendChild(qBtn);
+  var qLoader = asciiLoader();
   qWrap.appendChild(qTa);
   qWrap.appendChild(qImg);
   qWrap.appendChild(qAct);
@@ -479,6 +481,7 @@ export function renderMyProfile() {
     var qfile = qImg.files ? qImg.files[0] : null;
     if (!qtext && !qfile && !qGifUrl) return;
     voteHashtags(qtext);
+    qLoader.start(qBtn);
     var finishQ = function (image) {
       var thr = {
         no: nextNo(),
@@ -496,6 +499,7 @@ export function renderMyProfile() {
       publishUserBoard(dest).then(function (ok) {
         if (ok > 0) toast("Publicado en /" + dest + "/");
         else enqueueBoard(dest);
+        qLoader.stop();
       });
       refresh();
     };

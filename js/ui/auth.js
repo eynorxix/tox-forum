@@ -3,6 +3,7 @@ import { registerUser, login, logout } from "../store/db.js";
 import { generateKeys } from "../utils/nostr.js";
 import { publishProfile, publishRegistration } from "../utils/relays.js";
 import { enqueueRegistration } from "../utils/outbox.js";
+import { asciiLoader } from "../utils/ascii-loader.js";
 import { openMine, refresh, navTo } from "./appshell.js";
 import { refreshChip } from "./nav.js";
 import { syncMyPosts } from "../utils/relay-sync.js";
@@ -131,6 +132,7 @@ function buildRegister() {
   btn.textContent = "Aceptar y crear cuenta";
   btn.disabled = true;
   box.appendChild(btn);
+  var loader = asciiLoader();
 
   var status = document.createElement("p");
   status.className = "auth-status";
@@ -209,12 +211,14 @@ function buildRegister() {
     btn.disabled = true;
     status.textContent = "Generando tus claves...";
     status.style.color = "";
+    loader.start(btn);
     generateKeys().then(function (keys) {
       var user = registerUser(lastName, keys, lastAge);
       if (!user) {
         status.textContent = "No se pudo registrar: la validacion no es valida.";
         status.style.color = "var(--accent)";
         btn.disabled = false;
+        loader.stop();
         return;
       }
       stopEnforce();
@@ -225,11 +229,13 @@ function buildRegister() {
         desc: user.desc
       });
       status.textContent = "";
+      loader.stop();
       showKeysModal(user.nsec, keys.npub);
     }).catch(function () {
       status.textContent = "Error generando claves. Intenta de nuevo.";
       status.style.color = "var(--accent)";
       btn.disabled = false;
+      loader.stop();
     });
   });
 

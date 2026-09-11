@@ -2288,6 +2288,19 @@ textarea::placeholder {
 .notif-item.reply .date { margin-top: 3px; }
 .notif-page .notif-clear { max-width: 220px; display: block; margin-top: 14px; }
 
+/* ===== loader ascii (animacion de carga junto al boton de publicar) ===== */
+.ascii-loader {
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--accent);
+  white-space: pre;
+  margin-right: 8px;
+  z-index: 700;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* avatar + nombre clicnable en items de notificacion */
 .notif-avatar {
   width: 28px;
