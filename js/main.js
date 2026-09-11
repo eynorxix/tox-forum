@@ -4,6 +4,7 @@ import { purgeExpired, myPosts } from "./store/db.js";
 import { setHooks } from "./ui/appshell.js";
 import { go, render, showProfile, showMyProfile, openProfileByPubHex } from "./ui/view.js";
 import { renderNav, refreshChip } from "./ui/nav.js";
+import { initTheme } from "./ui/theme.js";
 import { warmNostr } from "./utils/nostr-lib.js";
 import { syncBoard, isWatchingBoard, syncAllBoards } from "./utils/relay-sync.js";
 import { startOutbox } from "./utils/outbox.js";
@@ -178,6 +179,7 @@ fetchForums().then(function (list) {
 renderNav();
 refreshChip();
 refreshNotifBadge();
+initTheme();
 render();
 
 /* URL de la vista actual. Cada seccion tiene su propio enlace:

@@ -8,7 +8,7 @@
 
 :root {
   color-scheme: dark;
-  /* Tokyo Night (tema oscuro) fijo — el tema claro se elimino */
+  /* Tokyo Night (tema oscuro) — tema por defecto */
   --bg: #1a1b26;            /* BG_MAIN */
   --bg-alt: #24283b;        /* BG_STORM */
   --bg-flo: #1f2335;        /* BG flotante */
@@ -32,6 +32,62 @@
   --muted: var(--text-side);
   --quote: var(--green);
   --pink: #f7768e;
+}
+
+/* Tema 2: oscuro con blanco (mayoria dark) */
+html[data-theme="mono"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --bg-alt: #171717;
+  --bg-flo: #121212;
+  --bg-toolbar: #050505;
+  --bg-inset: #212121;
+  --border: rgba(255, 255, 255, 0.18);
+  --text: #f2f2f2;
+  --text-side: #c8c8c8;
+  --comment: #808080;
+  --accent: #ffffff;
+  --orange: #e6e6e6;
+  --yellow: #f0f0f0;
+  --green: #e0e0e0;
+  --teal: #d6d6d6;
+  --cyan: #ebebeb;
+  --blue: #ffffff;
+  --purple: #dcdcdc;
+  --red: #ffffff;
+  --link: var(--blue);
+  --link-visited: var(--purple);
+  --muted: var(--text-side);
+  --quote: var(--green);
+  --pink: #ffffff;
+}
+
+/* Tema 3: Tokyo Night claro */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #e1e2e7;            /* BG_MAIN light */
+  --bg-alt: #e9e9ec;        /* BG_STORM light */
+  --bg-flo: #f4f4f5;        /* BG flotante light */
+  --bg-toolbar: #d5d6db;    /* BG_DARK light */
+  --bg-inset: #ffffff;      /* BG resaltado */
+  --border: rgba(55, 58, 80, 0.25);
+  --text: #4c505e;          /* FG_MAIN light */
+  --text-side: #616c88;     /* FG_SIDE light */
+  --comment: #9699a3;       /* FG_COMMENT light */
+  --accent: #f52a65;        /* NEON_RED light */
+  --orange: #b15c00;
+  --yellow: #8f5e15;
+  --green: #587539;
+  --teal: #008080;
+  --cyan: #007197;
+  --blue: #2e7de9;
+  --purple: #7847bd;
+  --red: #f52a65;
+  --link: var(--blue);
+  --link-visited: var(--purple);
+  --muted: var(--text-side);
+  --quote: var(--green);
+  --pink: #f52a65;
 }
 
 body {
@@ -190,6 +246,56 @@ a:visited { color: var(--link-visited); }
   gap: 8px;
   align-self: center;
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ---- conmutador de tema (3 puntos redondos con etiqueta debajo) ---- */
+#theme-switch {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+#theme-switch .theme-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  user-select: none;
+}
+#theme-switch .theme-dot {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+#theme-switch .theme-dot:hover {
+  transform: scale(1.12);
+  border-color: var(--accent);
+}
+#theme-switch .theme-opt.active .theme-dot {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.theme-dot-dark {
+  background: linear-gradient(135deg, #1a1b26 50%, #f7768e 50%);
+}
+.theme-dot-mono {
+  background: linear-gradient(135deg, #0d0d0d 50%, #ffffff 50%);
+}
+.theme-dot-light {
+  background: linear-gradient(135deg, #e1e2e7 50%, #f52a65 50%);
+}
+#theme-switch .dot-label {
+  font-size: 9px;
+  line-height: 1.1;
+  color: var(--text-side);
   white-space: nowrap;
 }
 .top-chip {
