@@ -34,6 +34,8 @@
   --pink: #f7768e;
   --forum-tag: #DBE079;
   --forum-name: #73daca;
+  --op-line: #ffffff;
+  --reply-line: #D631A2;
 }
 
 /* Tema 2: oscuro con blanco (mayoria dark) */
@@ -64,6 +66,8 @@ html[data-theme="mono"] {
   --pink: #ffffff;
   --forum-tag: #f0f0f0;
   --forum-name: #e0e0e0;
+  --op-line: #ffffff;
+  --reply-line: #D631A2;
 }
 
 /* Tema 3: Tokyo Night claro */
@@ -94,6 +98,8 @@ html[data-theme="light"] {
   --pink: #f52a65;
   --forum-tag: #473d8f;
   --forum-name: #1b7a7a;
+  --op-line: #6a5acd;
+  --reply-line: #c2185b;
 }
 
 body {
@@ -651,7 +657,7 @@ button:hover, input[type=submit]:hover {
   background: var(--bg);
 }
 .thread-op {
-  border-left: 3px solid var(--purple);
+  border-left: 3px solid var(--op-line);
   padding-left: 6px;
 }
 
@@ -695,12 +701,12 @@ button:hover, input[type=submit]:hover {
 /* ---- respuestas ---- */
 .replies {
   margin: 4px 0 0 12px;
-  border-left: 1px solid var(--green);
+  border-left: 1px solid var(--reply-line);
   padding-left: 10px;
 }
 .reply {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--green);
+  border-left: 3px solid var(--reply-line);
   background: var(--bg-alt);
   padding: 5px 8px;
   margin-bottom: 6px;
@@ -1274,7 +1280,7 @@ textarea::placeholder {
 }
 .profile-post {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--purple);
+  border-left: 3px solid var(--op-line);
   background: var(--bg-alt);
   padding: 6px 8px;
   font-size: 14px;
@@ -1443,7 +1449,7 @@ textarea::placeholder {
 }
 .my-post {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--purple);
+  border-left: 3px solid var(--op-line);
   background: var(--bg-alt);
   padding: 8px 10px;
   margin-bottom: 8px;
@@ -2385,7 +2391,7 @@ textarea::placeholder {
 .notif-item.reply {
   cursor: pointer;
   transition: background 0.12s ease;
-  border-left: 3px solid var(--purple);
+  border-left: 3px solid var(--reply-line);
   padding-left: 10px;
 }
 .notif-item.reply:hover { background: var(--bg-alt); border-left-color: var(--accent); }
