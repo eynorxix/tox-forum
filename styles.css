@@ -700,15 +700,14 @@ button:hover, input[type=submit]:hover {
   margin-bottom: 6px;
 }
 .reply .reply-image {
-  float: left;
-  margin: 2px 8px 2px 0;
-  max-width: 120px;
-  max-height: 120px;
-  overflow: hidden;
+  display: block;
+  margin: 0 0 6px;
+  max-width: 200px;
+  max-height: 200px;
 }
 .reply .reply-image img {
-  max-width: 120px;
-  max-height: 120px;
+  max-width: 200px;
+  max-height: 200px;
   display: block;
   border: 1px solid var(--border);
   cursor: zoom-in;
